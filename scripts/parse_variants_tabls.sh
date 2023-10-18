@@ -65,16 +65,31 @@ EOF
         echo "${i}%6" | bc | grep -q '^0$' && echo -en '\t'
         name=$(echo "${line}" | awk '{ print $1}')
         id=$(echo "HSC${name}" | sed 's|\.|_|')
-        echo -n " ${id}"
+        echo -n " ${id},"
         echo "${i}%6" | bc | grep -q '^5$' && echo ''
         i=$((i+1))
     done
     echo -e '\n};'
 
+    cat << EOF
+
+static const struct of_device_id hsc_of_match[] = {
+EOF
+    i=0
+    cat "${input_file}" | while read -r line; do
+        echo "${i}%2" | bc | grep -q '^0$' && echo -en '\t'
+        name=$(echo "${line}" | awk '{ print $1}')
+        id=$(echo "HSC${name}" | sed 's|\.|_|')
+        id_low=$(echo "${id}" | tr '[:upper:]' '[:lower:]')
+        echo -n "{ .compatible = \"honeywell,${id_low}\",}, "
+        echo "${i}%2" | bc | grep -q '^1$' && echo ''
+        i=$((i+1))
+    done
+    echo '};'
 
     cat << EOF
 
-static const struct i2c_device_id abp060mg_id_table[] = {
+static const struct i2c_device_id hsc_id[] = {
 EOF
     i=0
     cat "${input_file}" | while read -r line; do
@@ -89,6 +104,6 @@ EOF
     echo '};'
 }
 
-create_c_file > out.c
+create_c_file | sed 's/[ \t]*$//' > out.c
 
 
