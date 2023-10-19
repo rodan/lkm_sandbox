@@ -25,7 +25,7 @@
 
 	hsc@28 {
 		status = "okay";
-		compatible = "honeywell,hsc";
+		compatible = "honeywell,hsc030pa";
 		reg = <0x28>;
 	};
 };
