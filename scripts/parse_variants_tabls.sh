@@ -80,11 +80,12 @@ EOF
         echo "${i}%2" | bc | grep -q '^0$' && echo -en '\t'
         name=$(echo "${line}" | awk '{ print $1}')
         id=$(echo "HSC${name}" | sed 's|\.|_|')
-        id_low=$(echo "${id}" | tr '[:upper:]' '[:lower:]')
+        id_low="hsc$(echo ${name} | tr '[:upper:]' '[:lower:]')"
         echo -n "{ .compatible = \"honeywell,${id_low}\",}, "
         echo "${i}%2" | bc | grep -q '^1$' && echo ''
         i=$((i+1))
     done
+    echo -e '\t{}'
     echo '};'
 
     cat << EOF
@@ -96,11 +97,12 @@ EOF
         echo "${i}%2" | bc | grep -q '^0$' && echo -en '\t'
         name=$(echo "${line}" | awk '{ print $1}')
         id=$(echo "HSC${name}" | sed 's|\.|_|')
-        id_low=$(echo "${id}" | tr '[:upper:]' '[:lower:]')
+        id_low="hsc$(echo ${name} | tr '[:upper:]' '[:lower:]')"
         echo -n "{ \"${id_low}\", ${id} }, "
         echo "${i}%2" | bc | grep -q '^1$' && echo ''
         i=$((i+1))
     done
+    echo -e '\t{}'
     echo '};'
 }
 
