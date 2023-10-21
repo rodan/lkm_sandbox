@@ -195,6 +195,7 @@ static struct hsc_config hsc_config[] = {
 	[HSC150PG] = { .min =       0, .max = 1034250 },
 };
 
+#if 0
 static IIO_CONST_ATTR(in_concentration_temp_scale, "0.00000698689");
 static IIO_CONST_ATTR(in_concentration_pres_scale, "0.00000000436681223");
 
@@ -207,10 +208,14 @@ static struct attribute *hsc_attributes[] = {
 static const struct attribute_group hsc_attrs_group = {
 	.attrs = hsc_attributes,
 };
+#endif
 
 static bool hsc_measurement_is_valid(struct hsc_data *data)
 {
-	return true;
+	if (data->buffer[0] & 0xc0)
+		return 0;
+
+	return 1;
 }
 
 static int hsc_i2c_xfer(struct hsc_data *data)
@@ -238,6 +243,7 @@ static int hsc_smbus_xfer(struct hsc_data *data)
 
 static int hsc_get_measurement(struct hsc_data *data)
 {
+	const struct hsc_chip_data *chip = data->chip;
 	int ret;
 
 	/* don't bother sensor more than once a second */
@@ -250,16 +256,15 @@ static int hsc_get_measurement(struct hsc_data *data)
 
 	ret = data->xfer(data);
 
-	pr_info("recvd %02x %02x %02x %02x\n", data->buffer[0], data->buffer[1],
-		data->buffer[2], data->buffer[3]);
 	if (ret < 0)
 		return ret;
 
-#if 0
+	pr_info("recvd %02x %02x %02x %02x, status %02x\n", data->buffer[0],
+		data->buffer[1], data->buffer[2], data->buffer[3], chip->valid(data));
+
 	ret = chip->valid(data);
-	if (ret)
+	if (!ret)
 		return -EAGAIN;
-#endif
 
 	data->is_valid = true;
 
@@ -277,6 +282,7 @@ static int hsc_read_raw(struct iio_dev *indio_dev,
 
 	case IIO_CHAN_INFO_RAW:
 		mutex_lock(&data->lock);
+		memset(data->buffer, 0xff, 4);
 		ret = hsc_get_measurement(data);
 		mutex_unlock(&data->lock);
 
@@ -301,25 +307,45 @@ static int hsc_read_raw(struct iio_dev *indio_dev,
 		}
 		break;
 
-	case IIO_CHAN_INFO_SCALE:
+	case IIO_CHAN_INFO_PROCESSED:
 		switch (channel->type) {
 		case IIO_PRESSURE:
-			*val = 10;
+			*val = 101325; // FIXME
 			return IIO_VAL_INT;
+		default:
+			return -EINVAL;
+		}
+		break;
+/*
+IIO ABI expects
+	temp[C] = (code + offset) * scale
+
+but since the datasheet provides the following formula for determining the temperature
+	temp[C] = code * .097703957 - 50
+
+	temp[C] = conv * a + b
+	temp[C] = (conv + (b/a)) * a * 1000
+	scale = a * 1000 = .097703957 * 1000 = 97.703957
+	offset = b/a = -50 / .097703957 = -50000000 / 97704
+*/
+
+	case IIO_CHAN_INFO_SCALE:
+		switch (channel->type) {
+		case IIO_TEMP:
+			*val = 97;
+			*val2 = 703957;
+			return IIO_VAL_INT_PLUS_MICRO;
 		default:
 			return -EINVAL;
 		}
 		break;
 
 	case IIO_CHAN_INFO_OFFSET:
-		switch (channel->channel2) {
-		case IIO_PRESSURE:
-			*val = 44;
-			*val2 = 250000;
-			return IIO_VAL_INT_PLUS_MICRO;
+		switch (channel->type) {
 		case IIO_TEMP:
-			*val = -13;
-			return IIO_VAL_INT;
+			*val = -50000000;
+			*val2 = 97704;
+			return IIO_VAL_FRACTIONAL;
 		default:
 			return -EINVAL;
 		}
@@ -331,18 +357,18 @@ static int hsc_read_raw(struct iio_dev *indio_dev,
 static const struct iio_chan_spec hsc_channels[] = {
 	{
 	 .type = IIO_PRESSURE,
-	 .info_mask_separate = BIT(IIO_CHAN_INFO_OFFSET) |
-	 BIT(IIO_CHAN_INFO_RAW) | BIT(IIO_CHAN_INFO_PROCESSED),
+	 .info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
+	 BIT(IIO_CHAN_INFO_PROCESSED),
 	 },
 	{
 	 .type = IIO_TEMP,
-	 .info_mask_separate = BIT(IIO_CHAN_INFO_PROCESSED) |
-	 BIT(IIO_CHAN_INFO_RAW) | BIT(IIO_CHAN_INFO_OFFSET),
+	 .info_mask_separate = BIT(IIO_CHAN_INFO_SCALE) |
+	 BIT(IIO_CHAN_INFO_OFFSET) | BIT(IIO_CHAN_INFO_RAW),
 	 },
 };
 
 static const struct iio_info hsc_info = {
-	.attrs = &hsc_attrs_group,
+	//.attrs = &hsc_attrs_group,
 	.read_raw = hsc_read_raw,
 };
 
