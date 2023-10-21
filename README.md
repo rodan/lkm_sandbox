@@ -60,6 +60,6 @@ IIO context has 1 devices:
                 No trigger on this device
 ```
 
-(raw + offset) * scale provides the pressure in KPa and temperature in C.
+```(double) (raw + offset) * scale``` provides the pressure in KPa and temperature in mC, as per the IIO ABI requirements.
 
 
