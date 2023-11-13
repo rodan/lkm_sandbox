@@ -11,7 +11,7 @@
  */
 &{/chosen} {
 	overlays {
-		BB-I2C2-HSC.kernel = __TIMESTAMP__;
+		bb-i2c2-hsc-00A0.kernel = __TIMESTAMP__;
 	};
 };
 
