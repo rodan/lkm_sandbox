@@ -1,5 +1,5 @@
 
-obj-m += honeywell_hsc_i2c.o honeywell_hsc.o
+obj-m += honeywell_hsc.o honeywell_hsc_i2c.o honeywell_hsc_spi.o
 KBUILD_CFLAGS += -Wall
 PWD := $(CURDIR)
 #RELEASE := $(shell uname -r)

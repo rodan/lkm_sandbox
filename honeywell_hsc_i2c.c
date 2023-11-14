@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0-only
 /*
  * Honeywell TruStability HSC Series pressure/temperature sensor
  *
@@ -112,22 +113,22 @@ static const struct of_device_id hsc_i2c_match[] = {
 };
 MODULE_DEVICE_TABLE(of, hsc_i2c_match);
 
-static const struct i2c_device_id hsc_id[] = {
+static const struct i2c_device_id hsc_i2c_id[] = {
 	{ "hsc", HSC },
 	{ "ssc", SSC },
 	{}
 };
-MODULE_DEVICE_TABLE(i2c, hsc_id);
+MODULE_DEVICE_TABLE(i2c, hsc_i2c_id);
 
-static struct i2c_driver hsc_driver = {
+static struct i2c_driver hsc_i2c_driver = {
 	.driver = {
 		   .name = "honeywell_hsc",
 		   .of_match_table = hsc_i2c_match,
 		   },
 	.probe = hsc_i2c_probe,
-	.id_table = hsc_id,
+	.id_table = hsc_i2c_id,
 };
-module_i2c_driver(hsc_driver);
+module_i2c_driver(hsc_i2c_driver);
 
 MODULE_AUTHOR("Petre Rodan <2b4eda@subdimension.ro>");
 MODULE_DESCRIPTION("Honeywell HSC pressure sensor i2c driver");
