@@ -10,8 +10,7 @@
 #define _HONEYWELL_HSC_H
 
 #define  HSC_REG_MEASUREMENT_RD_SIZE  4         // get all conversions in one go since transfers are not address-based
-#define               HSC_OUTPUT_MIN  0x666     // 10% of 2^14
-#define               HSC_OUTPUT_MAX  0x3999    // 90% of 2^14
+#define            HSC_RANGE_STR_LEN  6
 
 struct hsc_chip_data;
 
@@ -22,9 +21,13 @@ struct hsc_data {
 	int (*xfer)(struct hsc_data * data);    // function that implements the chip reads
 	bool is_valid;                          // false if last transfer has failed
 	unsigned long last_update;              // time of last successful conversion
-	u8 buffer[4];                           // raw conversion data
-	int pmin;                               // min pressure limit
-	int pmax;                               // max pressure limit
+	u8 buffer[HSC_REG_MEASUREMENT_RD_SIZE]; // raw conversion data
+	char range_str[HSC_RANGE_STR_LEN];	// range as defined by the chip nomenclature - ie "030PA" or "NA"
+	s32 pmin;                               // min pressure limit
+	s32 pmax;                               // max pressure limit
+	u32 outmin;                             // minimum raw pressure in counts (based on transfer function)
+	u32 outmax;                             // maximum raw pressure in counts (based on transfer function)
+	u32 function;                           // transfer function
 	s64 p_scale;                            // pressure scale
 	s32 p_scale_nano;                       // pressure scale, decimal places
 	s64 p_offset;                           // pressure offset
@@ -35,10 +38,17 @@ struct hsc_chip_data {
 	bool (*valid)(struct hsc_data * data);  // function that checks the two status bits
 	const struct iio_chan_spec *channels;   // channel specifications
 	u8 num_channels;                        // pressure and temperature channels
-	u8 read_size;                           // always HSC_REG_MEASUREMENT_RD_SIZE
+};
+
+enum hsc_func_id {
+	HSC_FUNCTION_A,
+	HSC_FUNCTION_B,
+	HSC_FUNCTION_C,
+	HSC_FUNCTION_F
 };
 
 enum hsc_variant {
+	 HSC, SSC,
          HSC001BA, HSC1_6BA, HSC2_5BA, HSC004BA, HSC006BA, HSC010BA,
          HSC1_6MD, HSC2_5MD, HSC004MD, HSC006MD, HSC010MD, HSC016MD,
          HSC025MD, HSC040MD, HSC060MD, HSC100MD, HSC160MD, HSC250MD,

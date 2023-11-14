@@ -14,20 +14,17 @@
 #include <linux/module.h>
 #include <linux/mod_devicetable.h>
 #include <linux/iio/iio.h>
-//#include <linux/iio/sysfs.h>
 
 #include "honeywell_hsc.h"
 
 static int hsc_i2c_xfer(struct hsc_data *data)
 {
-	//const struct hsc_chip_data *chip = data->chip;
 	struct i2c_client *client = data->client;
 	struct i2c_msg msg;
 	int ret;
 
 	msg.addr = client->addr;
 	msg.flags = client->flags | I2C_M_RD;
-	//msg.len = chip->read_size;
 	msg.len = HSC_REG_MEASUREMENT_RD_SIZE;
 	msg.buf = (char *)&data->buffer;
 
@@ -41,7 +38,8 @@ static int hsc_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
 	struct device *dev = &client->dev;
 	struct iio_dev *indio_dev;
 	struct hsc_data *hsc;
-	int chip_id;
+	const char *range_nom;
+	int ret;
 
 	indio_dev = devm_iio_device_alloc(dev, sizeof(*hsc));
 	if (!indio_dev) {
@@ -57,10 +55,50 @@ static int hsc_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
 		return -EOPNOTSUPP;
 	}
 
-	dev_fwnode(dev);
-	chip_id = id->driver_data;
+	if (dev_fwnode(dev)) {
+		ret = device_property_read_u32(dev,
+				"honeywell,transfer-function", &hsc->function);
+		if (ret)
+			return dev_err_probe(dev, ret,
+				"honeywell,transfer-function could not be read\n");
+		if (hsc->function > HSC_FUNCTION_F)
+			return dev_err_probe(dev, -EINVAL,
+				"honeywell,transfer-function %d invalid\n",
+								hsc->function);
 
-	pr_info("hsc id 0x%02x found\n", chip_id);
+		ret = device_property_read_string(dev,
+				"honeywell,range_str", &range_nom);
+		if (ret)
+			return dev_err_probe(dev, ret,
+				"honeywell,range_str not defined\n");
+
+		// minimal input sanitization
+		memcpy(hsc->range_str, range_nom, HSC_RANGE_STR_LEN - 1);
+		hsc->range_str[HSC_RANGE_STR_LEN - 1] = 0;
+
+		if (strcasecmp(hsc->range_str, "na") == 0) {
+			// "not available"
+			// we got a custom chip not covered by the nomenclature with a custom range
+			ret = device_property_read_u32(dev, "honeywell,pmin-pascal",
+									&hsc->pmin);
+			if (ret)
+				return dev_err_probe(dev, ret,
+					"honeywell,pmin-pascal could not be read\n");
+			ret = device_property_read_u32(dev, "honeywell,pmax-pascal",
+									&hsc->pmax);
+			if (ret)
+				return dev_err_probe(dev, ret,
+					"honeywell,pmax-pascal could not be read\n");
+		}
+	} else {
+		/* when loaded as i2c device we need to use default values */
+		dev_notice(dev, "firmware node not found; unable to use dt options\n");
+		hsc->pmin = 0;
+		hsc->pmax = 172369;
+		hsc->function = HSC_FUNCTION_A;
+	}
+
+	pr_info("hsc id 0x%02x found\n", (u32) id->driver_data);
 	i2c_set_clientdata(client, indio_dev);
 	hsc->client = client;
 
@@ -68,130 +106,15 @@ static int hsc_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
 }
 
 static const struct of_device_id hsc_i2c_match[] = {
-	{ .compatible = "honeywell,hsc001ba",}, { .compatible = "honeywell,hsc1.6ba",},
-	{ .compatible = "honeywell,hsc2.5ba",}, { .compatible = "honeywell,hsc004ba",},
-	{ .compatible = "honeywell,hsc006ba",}, { .compatible = "honeywell,hsc010ba",},
-	{ .compatible = "honeywell,hsc1.6md",}, { .compatible = "honeywell,hsc2.5md",},
-	{ .compatible = "honeywell,hsc004md",}, { .compatible = "honeywell,hsc006md",},
-	{ .compatible = "honeywell,hsc010md",}, { .compatible = "honeywell,hsc016md",},
-	{ .compatible = "honeywell,hsc025md",}, { .compatible = "honeywell,hsc040md",},
-	{ .compatible = "honeywell,hsc060md",}, { .compatible = "honeywell,hsc100md",},
-	{ .compatible = "honeywell,hsc160md",}, { .compatible = "honeywell,hsc250md",},
-	{ .compatible = "honeywell,hsc400md",}, { .compatible = "honeywell,hsc600md",},
-	{ .compatible = "honeywell,hsc001bd",}, { .compatible = "honeywell,hsc1.6bd",},
-	{ .compatible = "honeywell,hsc2.5bd",}, { .compatible = "honeywell,hsc004bd",},
-	{ .compatible = "honeywell,hsc2.5mg",}, { .compatible = "honeywell,hsc004mg",},
-	{ .compatible = "honeywell,hsc006mg",}, { .compatible = "honeywell,hsc010mg",},
-	{ .compatible = "honeywell,hsc016mg",}, { .compatible = "honeywell,hsc025mg",},
-	{ .compatible = "honeywell,hsc040mg",}, { .compatible = "honeywell,hsc060mg",},
-	{ .compatible = "honeywell,hsc100mg",}, { .compatible = "honeywell,hsc160mg",},
-	{ .compatible = "honeywell,hsc250mg",}, { .compatible = "honeywell,hsc400mg",},
-	{ .compatible = "honeywell,hsc600mg",}, { .compatible = "honeywell,hsc001bg",},
-	{ .compatible = "honeywell,hsc1.6bg",}, { .compatible = "honeywell,hsc2.5bg",},
-	{ .compatible = "honeywell,hsc004bg",}, { .compatible = "honeywell,hsc006bg",},
-	{ .compatible = "honeywell,hsc010bg",}, { .compatible = "honeywell,hsc100ka",},
-	{ .compatible = "honeywell,hsc160ka",}, { .compatible = "honeywell,hsc250ka",},
-	{ .compatible = "honeywell,hsc400ka",}, { .compatible = "honeywell,hsc600ka",},
-	{ .compatible = "honeywell,hsc001ga",}, { .compatible = "honeywell,hsc160ld",},
-	{ .compatible = "honeywell,hsc250ld",}, { .compatible = "honeywell,hsc400ld",},
-	{ .compatible = "honeywell,hsc600ld",}, { .compatible = "honeywell,hsc001kd",},
-	{ .compatible = "honeywell,hsc1.6kd",}, { .compatible = "honeywell,hsc2.5kd",},
-	{ .compatible = "honeywell,hsc004kd",}, { .compatible = "honeywell,hsc006kd",},
-	{ .compatible = "honeywell,hsc010kd",}, { .compatible = "honeywell,hsc016kd",},
-	{ .compatible = "honeywell,hsc025kd",}, { .compatible = "honeywell,hsc040kd",},
-	{ .compatible = "honeywell,hsc060kd",}, { .compatible = "honeywell,hsc100kd",},
-	{ .compatible = "honeywell,hsc160kd",}, { .compatible = "honeywell,hsc250kd",},
-	{ .compatible = "honeywell,hsc400kd",}, { .compatible = "honeywell,hsc250lg",},
-	{ .compatible = "honeywell,hsc400lg",}, { .compatible = "honeywell,hsc600lg",},
-	{ .compatible = "honeywell,hsc001kg",}, { .compatible = "honeywell,hsc1.6kg",},
-	{ .compatible = "honeywell,hsc2.5kg",}, { .compatible = "honeywell,hsc004kg",},
-	{ .compatible = "honeywell,hsc006kg",}, { .compatible = "honeywell,hsc010kg",},
-	{ .compatible = "honeywell,hsc016kg",}, { .compatible = "honeywell,hsc025kg",},
-	{ .compatible = "honeywell,hsc040kg",}, { .compatible = "honeywell,hsc060kg",},
-	{ .compatible = "honeywell,hsc100kg",}, { .compatible = "honeywell,hsc160kg",},
-	{ .compatible = "honeywell,hsc250kg",}, { .compatible = "honeywell,hsc400kg",},
-	{ .compatible = "honeywell,hsc600kg",}, { .compatible = "honeywell,hsc001gg",},
-	{ .compatible = "honeywell,hsc015pa",}, { .compatible = "honeywell,hsc030pa",},
-	{ .compatible = "honeywell,hsc060pa",}, { .compatible = "honeywell,hsc100pa",},
-	{ .compatible = "honeywell,hsc150pa",}, { .compatible = "honeywell,hsc0.5nd",},
-	{ .compatible = "honeywell,hsc001nd",}, { .compatible = "honeywell,hsc002nd",},
-	{ .compatible = "honeywell,hsc004nd",}, { .compatible = "honeywell,hsc005nd",},
-	{ .compatible = "honeywell,hsc010nd",}, { .compatible = "honeywell,hsc020nd",},
-	{ .compatible = "honeywell,hsc030nd",}, { .compatible = "honeywell,hsc001pd",},
-	{ .compatible = "honeywell,hsc005pd",}, { .compatible = "honeywell,hsc015pd",},
-	{ .compatible = "honeywell,hsc030pd",}, { .compatible = "honeywell,hsc060pd",},
-	{ .compatible = "honeywell,hsc001ng",}, { .compatible = "honeywell,hsc002ng",},
-	{ .compatible = "honeywell,hsc004ng",}, { .compatible = "honeywell,hsc005ng",},
-	{ .compatible = "honeywell,hsc010ng",}, { .compatible = "honeywell,hsc020ng",},
-	{ .compatible = "honeywell,hsc030ng",}, { .compatible = "honeywell,hsc001pg",},
-	{ .compatible = "honeywell,hsc005pg",}, { .compatible = "honeywell,hsc015pg",},
-	{ .compatible = "honeywell,hsc030pg",}, { .compatible = "honeywell,hsc060pg",},
-	{ .compatible = "honeywell,hsc100pg",}, { .compatible = "honeywell,hsc150pg",},
+	{ .compatible = "honeywell,hsc",},
+	{ .compatible = "honeywell,ssc",},
 	{},
 };
-
 MODULE_DEVICE_TABLE(of, hsc_i2c_match);
 
 static const struct i2c_device_id hsc_id[] = {
-	{ "hsc001ba", HSC001BA }, { "hsc1.6ba", HSC1_6BA },
-	{ "hsc2.5ba", HSC2_5BA }, { "hsc004ba", HSC004BA },
-	{ "hsc006ba", HSC006BA }, { "hsc010ba", HSC010BA },
-	{ "hsc1.6md", HSC1_6MD }, { "hsc2.5md", HSC2_5MD },
-	{ "hsc004md", HSC004MD }, { "hsc006md", HSC006MD },
-	{ "hsc010md", HSC010MD }, { "hsc016md", HSC016MD },
-	{ "hsc025md", HSC025MD }, { "hsc040md", HSC040MD },
-	{ "hsc060md", HSC060MD }, { "hsc100md", HSC100MD },
-	{ "hsc160md", HSC160MD }, { "hsc250md", HSC250MD },
-	{ "hsc400md", HSC400MD }, { "hsc600md", HSC600MD },
-	{ "hsc001bd", HSC001BD }, { "hsc1.6bd", HSC1_6BD },
-	{ "hsc2.5bd", HSC2_5BD }, { "hsc004bd", HSC004BD },
-	{ "hsc2.5mg", HSC2_5MG }, { "hsc004mg", HSC004MG },
-	{ "hsc006mg", HSC006MG }, { "hsc010mg", HSC010MG },
-	{ "hsc016mg", HSC016MG }, { "hsc025mg", HSC025MG },
-	{ "hsc040mg", HSC040MG }, { "hsc060mg", HSC060MG },
-	{ "hsc100mg", HSC100MG }, { "hsc160mg", HSC160MG },
-	{ "hsc250mg", HSC250MG }, { "hsc400mg", HSC400MG },
-	{ "hsc600mg", HSC600MG }, { "hsc001bg", HSC001BG },
-	{ "hsc1.6bg", HSC1_6BG }, { "hsc2.5bg", HSC2_5BG },
-	{ "hsc004bg", HSC004BG }, { "hsc006bg", HSC006BG },
-	{ "hsc010bg", HSC010BG }, { "hsc100ka", HSC100KA },
-	{ "hsc160ka", HSC160KA }, { "hsc250ka", HSC250KA },
-	{ "hsc400ka", HSC400KA }, { "hsc600ka", HSC600KA },
-	{ "hsc001ga", HSC001GA }, { "hsc160ld", HSC160LD },
-	{ "hsc250ld", HSC250LD }, { "hsc400ld", HSC400LD },
-	{ "hsc600ld", HSC600LD }, { "hsc001kd", HSC001KD },
-	{ "hsc1.6kd", HSC1_6KD }, { "hsc2.5kd", HSC2_5KD },
-	{ "hsc004kd", HSC004KD }, { "hsc006kd", HSC006KD },
-	{ "hsc010kd", HSC010KD }, { "hsc016kd", HSC016KD },
-	{ "hsc025kd", HSC025KD }, { "hsc040kd", HSC040KD },
-	{ "hsc060kd", HSC060KD }, { "hsc100kd", HSC100KD },
-	{ "hsc160kd", HSC160KD }, { "hsc250kd", HSC250KD },
-	{ "hsc400kd", HSC400KD }, { "hsc250lg", HSC250LG },
-	{ "hsc400lg", HSC400LG }, { "hsc600lg", HSC600LG },
-	{ "hsc001kg", HSC001KG }, { "hsc1.6kg", HSC1_6KG },
-	{ "hsc2.5kg", HSC2_5KG }, { "hsc004kg", HSC004KG },
-	{ "hsc006kg", HSC006KG }, { "hsc010kg", HSC010KG },
-	{ "hsc016kg", HSC016KG }, { "hsc025kg", HSC025KG },
-	{ "hsc040kg", HSC040KG }, { "hsc060kg", HSC060KG },
-	{ "hsc100kg", HSC100KG }, { "hsc160kg", HSC160KG },
-	{ "hsc250kg", HSC250KG }, { "hsc400kg", HSC400KG },
-	{ "hsc600kg", HSC600KG }, { "hsc001gg", HSC001GG },
-	{ "hsc015pa", HSC015PA }, { "hsc030pa", HSC030PA },
-	{ "hsc060pa", HSC060PA }, { "hsc100pa", HSC100PA },
-	{ "hsc150pa", HSC150PA }, { "hsc0.5nd", HSC0_5ND },
-	{ "hsc001nd", HSC001ND }, { "hsc002nd", HSC002ND },
-	{ "hsc004nd", HSC004ND }, { "hsc005nd", HSC005ND },
-	{ "hsc010nd", HSC010ND }, { "hsc020nd", HSC020ND },
-	{ "hsc030nd", HSC030ND }, { "hsc001pd", HSC001PD },
-	{ "hsc005pd", HSC005PD }, { "hsc015pd", HSC015PD },
-	{ "hsc030pd", HSC030PD }, { "hsc060pd", HSC060PD },
-	{ "hsc001ng", HSC001NG }, { "hsc002ng", HSC002NG },
-	{ "hsc004ng", HSC004NG }, { "hsc005ng", HSC005NG },
-	{ "hsc010ng", HSC010NG }, { "hsc020ng", HSC020NG },
-	{ "hsc030ng", HSC030NG }, { "hsc001pg", HSC001PG },
-	{ "hsc005pg", HSC005PG }, { "hsc015pg", HSC015PG },
-	{ "hsc030pg", HSC030PG }, { "hsc060pg", HSC060PG },
-	{ "hsc100pg", HSC100PG }, { "hsc150pg", HSC150PG },
+	{ "hsc", HSC },
+	{ "ssc", SSC },
 	{}
 };
 MODULE_DEVICE_TABLE(i2c, hsc_id);
