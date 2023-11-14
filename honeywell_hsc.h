@@ -15,7 +15,7 @@
 struct hsc_chip_data;
 
 struct hsc_data {
-	void *client;
+	void *client;                           // either i2c or spi kernel interface struct for current dev
 	const struct hsc_chip_data *chip;
 	struct mutex lock;                      // lock protecting chip reads
 	int (*xfer)(struct hsc_data * data);    // function that implements the chip reads

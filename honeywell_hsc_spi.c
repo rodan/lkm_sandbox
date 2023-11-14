@@ -15,21 +15,16 @@
 
 static int hsc_spi_xfer(struct hsc_data *data)
 {
-#if 0
-	struct i2c_client *client = data->client;
-	struct i2c_msg msg;
+	struct spi_transfer xfer = {
+		.tx_buf = NULL,
+		.rx_buf = (char *)&data->buffer,
+		.len = HSC_REG_MEASUREMENT_RD_SIZE,
+	};
 	int ret;
 
-	msg.addr = client->addr;
-	msg.flags = client->flags | I2C_M_RD;
-	msg.len = HSC_REG_MEASUREMENT_RD_SIZE;
-	msg.buf = (char *)&data->buffer;
+	ret = spi_sync_transfer(data->client, &xfer, 1);
 
-	ret = i2c_transfer(client->adapter, &msg, 1);
-
-	return (ret == 2) ? 0 : ret;
-#endif
-	return 0;
+	return ret;
 }
 
 static int hsc_spi_probe(struct spi_device *spi)
