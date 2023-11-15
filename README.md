@@ -1,8 +1,8 @@
 
 ## Honeywell TruStability™ HSC Series pressure sensor - iio device driver
 
-Linux kernel driver for all variants of the [HSC family](https://sps.honeywell.com/us/en/products/advanced-sensing-technologies/healthcare-sensing/board-mount-pressure-sensors/trustability-hsc-series) of sensors.
-for the time being only the i2c version of the sensors is supported.
+Linux kernel driver for all digital variants of the [HSC family](https://sps.honeywell.com/us/en/products/advanced-sensing-technologies/healthcare-sensing/board-mount-pressure-sensors/trustability-hsc-series) of sensors.
+both i2c and spi interface versions are covered by this library.
 
 ### device tree overlay contents
 
@@ -17,17 +17,41 @@ for the time being only the i2c version of the sensors is supported.
 
         hsc@ADDR {
                 status = "okay";
-                compatible = "honeywell,VARIANT";
+                compatible = "honeywell,hsc";
                 reg = <ADDR>;
+                honeywell,transfer-function = <TRANSFER_FUNCTION_ID>;
+                honeywell,range_str = "VARIANT";
         };
 };
 ```
 
 where ```ADDR``` is the assigned i2c address: either ```0x28```, ```0x38```, ```0x48```, ```0x58```, ```0x68```, ```0x78```, ```0x88``` or ```0x98```.
 
-and ```VARIANT``` defines the pressure range and is one of 001ba 1.6ba 2.5ba 004ba 006ba 010ba 1.6md 2.5md 004md 006md 010md 016md 025md 040md 060md 100md 160md 250md 400md 600md 001bd 1.6bd 2.5bd 004bd 2.5mg 004mg 006mg 010mg 016mg 025mg 040mg 060mg 100mg 160mg 250mg 400mg 600mg 001bg 1.6bg 2.5bg 004bg 006bg 010bg 100ka 160ka 250ka 400ka 600ka 001ga 160ld 250ld 400ld 600ld 001kd 1.6kd 2.5kd 004kd 006kd 010kd 016kd 025kd 040kd 060kd 100kd 160kd 250kd 400kd 250lg 400lg 600lg 001kg 1.6kg 2.5kg 004kg 006kg 010kg 016kg 025kg 040kg 060kg 100kg 160kg 250kg 400kg 600kg 001gg 015pa 030pa 060pa 100pa 150pa 0.5nd 001nd 002nd 004nd 005nd 010nd 020nd 030nd 001pd 005pd 015pd 030pd 060pd 001ng 002ng 004ng 005ng 010ng 020ng 030ng 001pg 005pg 015pg 030pg 060pg 100pg 150pg
+```TRANSFER_FUNCTION_ID``` | nomenclature | info
+--- | --- | ---
+0 | A | 10% to 90% of 2^14 counts
+1 | B | 5% to 95% of 2^14 counts
+2 | C | 5% to 85% of 2^14 counts
+3 | F | 4% to 94% of 2^14 counts
+
+
+```VARIANT``` defines the pressure range as specified in the sensor's name and is one of: 001BA 1.6BA 2.5BA 004BA 006BA 010BA 1.6MD 2.5MD 004MD 006MD 010MD 016MD 025MD 040MD 060MD 100MD 160MD 250MD 400MD 600MD 001BD 1.6BD 2.5BD 004BD 2.5MG 004MG 006MG 010MG 016MG 025MG 040MG 060MG 100MG 160MG 250MG 400MG 600MG 001BG 1.6BG 2.5BG 004BG 006BG 010BG 100KA 160KA 250KA 400KA 600KA 001GA 160LD 250LD 400LD 600LD 001KD 1.6KD 2.5KD 004KD 006KD 010KD 016KD 025KD 040KD 060KD 100KD 160KD 250KD 400KD 250LG 400LG 600LG 001KG 1.6KG 2.5KG 004KG 006KG 010KG 016KG 025KG 040KG 060KG 100KG 160KG 250KG 400KG 600KG 001GG 015PA 030PA 060PA 100PA 150PA 0.5ND 001ND 002ND 004ND 005ND 010ND 020ND 030ND 001PD 005PD 015PD 030PD 060PD 001NG 002NG 004NG 005NG 010NG 020NG 030NG 001PG 005PG 015PG 030PG 060PG 100PG 150PG
 
 please consult the chip nomenclature in the datasheet.
+
+in case it's a custom chip with a different measurement range, then set ```na``` as VARIANT and provide the limits:
+
+```
+        hsc@ADDR {
+                status = "okay";
+                compatible = "honeywell,hsc";
+                reg = <ADDR>;
+                honeywell,transfer-function = <TRANSFER_FUNCTION_ID>;
+                honeywell,range_str = "na";
+                honeywell,pmin-pascal = <0>;
+                honeywell,pmax-pascal = <206850>;
+        };
+```
 
 ### sysfs-based user-space interface
 
