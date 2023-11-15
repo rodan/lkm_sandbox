@@ -27,9 +27,13 @@
 		status = "okay";
 		compatible = "honeywell,hsc";
 		reg = <0x28>;
-		honeywell,range_str = "030PA";
-		honeywell,pmin-pascal = <0>;
-		honeywell,pmax-pascal = <206850>;
 		honeywell,transfer-function = <0>;
+		honeywell,range_str = "030PA";
+		// in case of a custom range, use NA as range_str
+		// and populate pmin-pascal and pmax-pascal
+		// with the range limits converted into pascals
+		//honeywell,range_str = "NA";
+		//honeywell,pmin-pascal = <0>;
+		//honeywell,pmax-pascal = <206850>;
 	};
 };

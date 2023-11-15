@@ -27,6 +27,8 @@ both i2c and spi interface versions are covered by this library.
 
 where ```ADDR``` is the assigned i2c address: either ```0x28```, ```0x38```, ```0x48```, ```0x58```, ```0x68```, ```0x78```, ```0x88``` or ```0x98```.
 
+The transfer function limits define the raw output of the sensor at a given pressure input.
+
 ```TRANSFER_FUNCTION_ID``` | nomenclature | info
 --- | --- | ---
 0 | A | 10% to 90% of 2^14 counts
@@ -39,7 +41,7 @@ where ```ADDR``` is the assigned i2c address: either ```0x28```, ```0x38```, ```
 
 please consult the chip nomenclature in the datasheet.
 
-in case it's a custom chip with a different measurement range, then set ```na``` as VARIANT and provide the limits:
+in case it's a custom chip with a different measurement range, then set ```NA``` (Not Available) as VARIANT and provide the limits:
 
 ```
         hsc@ADDR {
@@ -47,7 +49,7 @@ in case it's a custom chip with a different measurement range, then set ```na```
                 compatible = "honeywell,hsc";
                 reg = <ADDR>;
                 honeywell,transfer-function = <TRANSFER_FUNCTION_ID>;
-                honeywell,range_str = "na";
+                honeywell,range_str = "NA";
                 honeywell,pmin-pascal = <0>;
                 honeywell,pmax-pascal = <206850>;
         };
@@ -84,6 +86,6 @@ IIO context has 1 devices:
                 No trigger on this device
 ```
 
-```(double) (raw + offset) * scale``` provides the pressure in KPa and temperature in mC, as per the IIO ABI requirements.
+```(double) (raw + offset) * scale``` provides the pressure in KPa and temperature in milli degrees C, as per the IIO ABI requirements.
 
 
