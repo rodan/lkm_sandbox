@@ -5,7 +5,7 @@
  * Copyright (c) 2023 Petre Rodan <2b4eda@subdimension.ro>
  *
  * (7-bit I2C slave address can be 0x28, 0x38, 0x48, 0x58,
-                                        0x68, 0x78, 0x88 or 0x98)
+ *                                    0x68, 0x78, 0x88 or 0x98)
  *
  * Datasheet: https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/siot/en-us/products/sensors/pressure-sensors/board-mount-pressure-sensors/trustability-hsc-series/documents/sps-siot-trustability-hsc-series-high-accuracy-board-mount-pressure-sensors-50099148-a-en-ciid-151133.pdf
  * i2c-related datasheet: https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/siot/en-us/products/sensors/pressure-sensors/board-mount-pressure-sensors/common/documents/sps-siot-i2c-comms-digital-output-pressure-sensors-tn-008201-3-en-ciid-45841.pdf
@@ -51,11 +51,10 @@ static int hsc_i2c_probe(struct i2c_client *client,
 
 	hsc = iio_priv(indio_dev);
 
-	if (i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
+	if (i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
 		hsc->xfer = hsc_i2c_xfer;
-	} else {
+	else
 		return -EOPNOTSUPP;
-	}
 
 	if (!dev_fwnode(dev))
 		return -EOPNOTSUPP;

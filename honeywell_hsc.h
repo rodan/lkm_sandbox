@@ -18,7 +18,7 @@ struct hsc_data {
 	void *client;                           // either i2c or spi kernel interface struct for current dev
 	const struct hsc_chip_data *chip;
 	struct mutex lock;                      // lock protecting chip reads
-	int (*xfer)(struct hsc_data * data);    // function that implements the chip reads
+	int (*xfer)(struct hsc_data *data);    // function that implements the chip reads
 	bool is_valid;                          // false if last transfer has failed
 	unsigned long last_update;              // time of last successful conversion
 	u8 buffer[HSC_REG_MEASUREMENT_RD_SIZE]; // raw conversion data
@@ -35,7 +35,7 @@ struct hsc_data {
 };
 
 struct hsc_chip_data {
-	bool (*valid)(struct hsc_data * data);  // function that checks the two status bits
+	bool (*valid)(struct hsc_data *data);  // function that checks the two status bits
 	const struct iio_chan_spec *channels;   // channel specifications
 	u8 num_channels;                        // pressure and temperature channels
 };

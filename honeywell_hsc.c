@@ -187,9 +187,8 @@ static int hsc_get_measurement(struct hsc_data *data)
 	int ret;
 
 	/* don't bother sensor more than once a second */
-	if (!time_after(jiffies, data->last_update + HZ)) {
+	if (!time_after(jiffies, data->last_update + HZ))
 		return data->is_valid ? 0 : -EAGAIN;
-	}
 
 	data->is_valid = false;
 	data->last_update = jiffies;
@@ -213,25 +212,24 @@ static int hsc_get_measurement(struct hsc_data *data)
 }
 
 /*
-4 bytes are read, the dissection looks like
-
-.  0  .  1  .  2  .  3  .  4  .  5  .  6  .  7  .
-byte 0:
-|  s1 |  s0 | b13 | b12 | b11 | b10 |  b9 |  b8 |
-| status    | bridge data (pressure) MSB        |
-byte 1:
-|  b7 |  b6 |  b5 |  b4 |  b3 |  b2 |  b1 |  b0 |
-| bridge data (pressure) LSB                    |
-byte 2:
-| t10 |  t9 |  t8 |  t7 |  t6 |  t5 |  t4 |  t3 |
-| temperature data MSB                          |
-byte 3:
-|  t2 |  t1 |  t0 |  X  |  X  |  X  |  X  |  X  |
-| temperature LSB | ignore                      |
-
-.  0  .  1  .  2  .  3  .  4  .  5  .  6  .  7  .
-
-*/
+ * 4 bytes are read, the dissection looks like
+ *
+ * .  0  .  1  .  2  .  3  .  4  .  5  .  6  .  7  .
+ * byte 0:
+ * |  s1 |  s0 | b13 | b12 | b11 | b10 |  b9 |  b8 |
+ * | status    | bridge data (pressure) MSB        |
+ * byte 1:
+ * |  b7 |  b6 |  b5 |  b4 |  b3 |  b2 |  b1 |  b0 |
+ * | bridge data (pressure) LSB                    |
+ * byte 2:
+ * | t10 |  t9 |  t8 |  t7 |  t6 |  t5 |  t4 |  t3 |
+ * | temperature data MSB                          |
+ * byte 3:
+ * |  t2 |  t1 |  t0 |  X  |  X  |  X  |  X  |  X  |
+ * | temperature LSB | ignore                      |
+ *
+ * .  0  .  1  .  2  .  3  .  4  .  5  .  6  .  7  .
+ */
 
 static int hsc_read_raw(struct iio_dev *indio_dev,
 			struct iio_chan_spec const *channel, int *val,
@@ -287,7 +285,7 @@ static int hsc_read_raw(struct iio_dev *indio_dev,
  *	=>
  *	scale = Q = (Pmax - Pmin) / (HSC_OUTPUT_MAX - HSC_OUTPUT_MIN)
  *	offset = Pmin/Q = Pmin * (HSC_OUTPUT_MAX - HSC_OUTPUT_MIN) / (Pmax - Pmin)
-*/
+ */
 
 	case IIO_CHAN_INFO_SCALE:
 		switch (channel->type) {
