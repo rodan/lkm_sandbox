@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Freescale MPL115A1 pressure/temperature sensor
+ * Honeywell TruStability HSC Series pressure/temperature sensor
  *
- * Copyright (c) 2016 Akinobu Mita <akinobu.mita@gmail.com>
+ * Copyright (c) 2023 Petre Rodan <2b4eda@subdimension.ro>
  *
- * Datasheet: http://www.nxp.com/files/sensors/doc/data_sheet/MPL115A1.pdf
+ * Datasheet: https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/siot/en-us/products/sensors/pressure-sensors/board-mount-pressure-sensors/trustability-hsc-series/documents/sps-siot-trustability-hsc-series-high-accuracy-board-mount-pressure-sensors-50099148-a-en-ciid-151133.pdf
  */
 
 #include <linux/module.h>

@@ -1,8 +1,4 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (C) 2013 CircuitCo
- * Virtual cape for SPI0 on connector pins P9.22 P9.21 P9.18 P9.17
- */
 
 /dts-v1/;
 /plugin/;
