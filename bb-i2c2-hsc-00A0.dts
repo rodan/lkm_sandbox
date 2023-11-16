@@ -17,13 +17,12 @@
 
 &i2c2 {
 	status = "okay";
-
 	clock-frequency = <400000>;
 
 	#address-cells = <1>;
 	#size-cells = <0>;
 
-	hsc@28 {
+	HSCMRNN030PA2A3@28 {
 		status = "okay";
 		compatible = "honeywell,hsc";
 		reg = <0x28>;

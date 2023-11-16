@@ -25,17 +25,15 @@
 &ocp {
 	P9_11_pinmux { status = "disabled"; };	/* P9_11 honeywell chip CS pin */
 	P9_17_pinmux { status = "disabled"; };	/* P9_17 (A16) spi0_cs0.spi0_cs0 */
-	P9_18_pinmux { status = "disabled"; };	/* P9_18 (B16) spi0_d1.spi0_d1 */
 	P9_21_pinmux { status = "disabled"; };	/* P9_21 (B17) spi0_d0.spi0_d0 */
 	P9_22_pinmux { status = "disabled"; };	/* P9_22 (A17) spi0_sclk.spi0_sclk */
 };
 
 &am33xx_pinmux {
-	bb_spi0_pins: pinmux_bb_spi0_pins {
+	spi0_pins: pinmux_spi0_pins {
 		pinctrl-single,pins = <
 			AM33XX_PADCONF(AM335X_PIN_SPI0_SCLK, PIN_INPUT, MUX_MODE0)	/* P9_22 (A17) spi0_sclk.spi0_sclk */
 			AM33XX_PADCONF(AM335X_PIN_SPI0_D0, PIN_INPUT, MUX_MODE0)	/* P9_21 (B17) spi0_d0.spi0_d0 */
-			AM33XX_PADCONF(AM335X_PIN_SPI0_D1, PIN_INPUT, MUX_MODE0)	/* P9_18 (B16) spi0_d1.spi0_d1 */
 			AM33XX_PADCONF(AM335X_PIN_SPI0_CS0, PIN_INPUT, MUX_MODE0)	/* P9_17 (A16) spi0_cs0.spi0_cs0 */
 		>;
 	};
@@ -47,14 +45,14 @@
 
 	status = "okay";
 	pinctrl-names = "default";
-	pinctrl-0 = <&bb_spi0_pins>;
+	pinctrl-0 = <&spi0_pins>;
 
 	channel@0{
 		status = "disabled";
 		reg = <0>;
 	};
 
-	hsc@0{
+	HSCMLNN100PASA3@0{
 		status = "okay";
 		compatible = "honeywell,hsc";
 		reg = <0>;
