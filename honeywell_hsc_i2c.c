@@ -34,7 +34,8 @@ static int hsc_i2c_xfer(struct hsc_data *data)
 	return (ret == 2) ? 0 : ret;
 }
 
-static int hsc_i2c_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int hsc_i2c_probe(struct i2c_client *client,
+			 const struct i2c_device_id *id)
 {
 	struct device *dev = &client->dev;
 	struct iio_dev *indio_dev;
@@ -58,20 +59,22 @@ static int hsc_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
 
 	if (dev_fwnode(dev)) {
 		ret = device_property_read_u32(dev,
-				"honeywell,transfer-function", &hsc->function);
+					       "honeywell,transfer-function",
+					       &hsc->function);
 		if (ret)
 			return dev_err_probe(dev, ret,
-				"honeywell,transfer-function could not be read\n");
+					     "honeywell,transfer-function could not be read\n");
 		if (hsc->function > HSC_FUNCTION_F)
 			return dev_err_probe(dev, -EINVAL,
-				"honeywell,transfer-function %d invalid\n",
-								hsc->function);
+					     "honeywell,transfer-function %d invalid\n",
+					     hsc->function);
 
 		ret = device_property_read_string(dev,
-				"honeywell,range_str", &range_nom);
+						  "honeywell,range_str",
+						  &range_nom);
 		if (ret)
 			return dev_err_probe(dev, ret,
-				"honeywell,range_str not defined\n");
+					     "honeywell,range_str not defined\n");
 
 		// minimal input sanitization
 		memcpy(hsc->range_str, range_nom, HSC_RANGE_STR_LEN - 1);
@@ -80,20 +83,25 @@ static int hsc_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
 		if (strcasecmp(hsc->range_str, "na") == 0) {
 			// "not available"
 			// we got a custom chip not covered by the nomenclature with a custom range
-			ret = device_property_read_u32(dev, "honeywell,pmin-pascal",
-									&hsc->pmin);
+			ret =
+			    device_property_read_u32(dev,
+						     "honeywell,pmin-pascal",
+						     &hsc->pmin);
 			if (ret)
 				return dev_err_probe(dev, ret,
-					"honeywell,pmin-pascal could not be read\n");
-			ret = device_property_read_u32(dev, "honeywell,pmax-pascal",
-									&hsc->pmax);
+						     "honeywell,pmin-pascal could not be read\n");
+			ret =
+			    device_property_read_u32(dev,
+						     "honeywell,pmax-pascal",
+						     &hsc->pmax);
 			if (ret)
 				return dev_err_probe(dev, ret,
-					"honeywell,pmax-pascal could not be read\n");
+						     "honeywell,pmax-pascal could not be read\n");
 		}
 	} else {
 		/* when loaded as i2c device we need to use default values */
-		dev_notice(dev, "firmware node not found; unable to use dt options\n");
+		dev_notice(dev,
+			   "firmware node not found; unable to use dt options\n");
 		hsc->pmin = 0;
 		hsc->pmax = 172369;
 		hsc->function = HSC_FUNCTION_A;
@@ -107,17 +115,19 @@ static int hsc_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
 }
 
 static const struct of_device_id hsc_i2c_match[] = {
-	{ .compatible = "honeywell,hsc",},
-	{ .compatible = "honeywell,ssc",},
+	{.compatible = "honeywell,hsc",},
+	{.compatible = "honeywell,ssc",},
 	{},
 };
+
 MODULE_DEVICE_TABLE(of, hsc_i2c_match);
 
 static const struct i2c_device_id hsc_i2c_id[] = {
-	{ "hsc", HSC },
-	{ "ssc", SSC },
+	{"hsc", HSC},
+	{"ssc", SSC},
 	{}
 };
+
 MODULE_DEVICE_TABLE(i2c, hsc_i2c_id);
 
 static struct i2c_driver hsc_i2c_driver = {
@@ -128,6 +138,7 @@ static struct i2c_driver hsc_i2c_driver = {
 	.probe = hsc_i2c_probe,
 	.id_table = hsc_i2c_id,
 };
+
 module_i2c_driver(hsc_i2c_driver);
 
 MODULE_AUTHOR("Petre Rodan <2b4eda@subdimension.ro>");

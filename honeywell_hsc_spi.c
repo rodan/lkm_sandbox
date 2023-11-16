@@ -53,20 +53,21 @@ static int hsc_spi_probe(struct spi_device *spi)
 	hsc->client = spi;
 
 	ret = device_property_read_u32(dev,
-			"honeywell,transfer-function", &hsc->function);
+				       "honeywell,transfer-function",
+				       &hsc->function);
 	if (ret)
 		return dev_err_probe(dev, ret,
-			"honeywell,transfer-function could not be read\n");
+				     "honeywell,transfer-function could not be read\n");
 	if (hsc->function > HSC_FUNCTION_F)
 		return dev_err_probe(dev, -EINVAL,
-			"honeywell,transfer-function %d invalid\n",
-							hsc->function);
+				     "honeywell,transfer-function %d invalid\n",
+				     hsc->function);
 
-	ret = device_property_read_string(dev,
-			"honeywell,range_str", &range_nom);
+	ret =
+	    device_property_read_string(dev, "honeywell,range_str", &range_nom);
 	if (ret)
 		return dev_err_probe(dev, ret,
-			"honeywell,range_str not defined\n");
+				     "honeywell,range_str not defined\n");
 
 	// minimal input sanitization
 	memcpy(hsc->range_str, range_nom, HSC_RANGE_STR_LEN - 1);
@@ -76,33 +77,35 @@ static int hsc_spi_probe(struct spi_device *spi)
 		// range string "not available"
 		// we got a custom chip not covered by the nomenclature with a custom range
 		ret = device_property_read_u32(dev, "honeywell,pmin-pascal",
-								&hsc->pmin);
+					       &hsc->pmin);
 		if (ret)
 			return dev_err_probe(dev, ret,
-				"honeywell,pmin-pascal could not be read\n");
+					     "honeywell,pmin-pascal could not be read\n");
 		ret = device_property_read_u32(dev, "honeywell,pmax-pascal",
-								&hsc->pmax);
+					       &hsc->pmax);
 		if (ret)
 			return dev_err_probe(dev, ret,
-				"honeywell,pmax-pascal could not be read\n");
+					     "honeywell,pmax-pascal could not be read\n");
 	}
 
 	return hsc_probe(indio_dev, &spi->dev, spi_get_device_id(spi)->name,
-			    spi_get_device_id(spi)->driver_data);
+			 spi_get_device_id(spi)->driver_data);
 }
 
 static const struct of_device_id hsc_spi_match[] = {
-	{ .compatible = "honeywell,hsc",},
-	{ .compatible = "honeywell,ssc",},
+	{.compatible = "honeywell,hsc",},
+	{.compatible = "honeywell,ssc",},
 	{},
 };
+
 MODULE_DEVICE_TABLE(of, hsc_spi_match);
 
 static const struct spi_device_id hsc_spi_id[] = {
-	{ "hsc", HSC },
-	{ "ssc", SSC },
+	{"hsc", HSC},
+	{"ssc", SSC},
 	{}
 };
+
 MODULE_DEVICE_TABLE(spi, hsc_spi_id);
 
 static struct spi_driver hsc_spi_driver = {
@@ -113,6 +116,7 @@ static struct spi_driver hsc_spi_driver = {
 	.probe = hsc_spi_probe,
 	.id_table = hsc_spi_id,
 };
+
 module_spi_driver(hsc_spi_driver);
 
 MODULE_AUTHOR("Petre Rodan <2b4eda@subdimension.ro>");

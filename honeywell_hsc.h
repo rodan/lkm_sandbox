@@ -53,7 +53,7 @@ enum hsc_variant {
 };
 
 int hsc_probe(struct iio_dev *indio_dev, struct device *dev,
-		 const char *name, int type);
+	      const char *name, int type);
 void hsc_remove(struct iio_dev *indio_dev);
 
 #endif

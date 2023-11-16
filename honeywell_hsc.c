@@ -34,7 +34,7 @@ static const struct hsc_func_spec hsc_func_spec[] = {
 
 // pressure range for current chip based on the nomenclature
 struct hsc_range_config {
-	char name[HSC_RANGE_STR_LEN]; // 5-char string that defines the range - ie "030PA"
+	char name[HSC_RANGE_STR_LEN];	// 5-char string that defines the range - ie "030PA"
 	s32 pmin;		// minimal pressure in pascals
 	s32 pmax;		// maximum pressure in pascals
 };
@@ -200,7 +200,8 @@ static int hsc_get_measurement(struct hsc_data *data)
 		return ret;
 
 	pr_info("recvd %02x %02x %02x %02x, status %02x\n", data->buffer[0],
-		data->buffer[1], data->buffer[2], data->buffer[3], chip->valid(data));
+		data->buffer[1], data->buffer[2], data->buffer[3],
+		chip->valid(data));
 
 	ret = chip->valid(data);
 	if (!ret)
@@ -251,11 +252,13 @@ static int hsc_read_raw(struct iio_dev *indio_dev,
 
 		switch (channel->type) {
 		case IIO_PRESSURE:
-			*val = ((data->buffer[0] & 0x3f) << 8) + data->buffer[1];
+			*val =
+			    ((data->buffer[0] & 0x3f) << 8) + data->buffer[1];
 			return IIO_VAL_INT;
 		case IIO_TEMP:
-			*val = (data->buffer[2] << 3) +
-			     ((data->buffer[3] & 0xe0) >> 5);
+			*val =
+			    (data->buffer[2] << 3) +
+			    ((data->buffer[3] & 0xe0) >> 5);
 			ret = 0;
 			if (!ret)
 				return IIO_VAL_INT;
@@ -271,6 +274,7 @@ static int hsc_read_raw(struct iio_dev *indio_dev,
  *
  *	datasheet provides the following formula for determining the temperature
  *	temp[C] = conv * a + b
+ *        where a = 200/2047; b = -50
  *
  *	temp[C] = (conv + (b/a)) * a * (1000)
  *      =>
@@ -342,7 +346,7 @@ static const struct hsc_chip_data hsc_chip = {
 };
 
 int hsc_probe(struct iio_dev *indio_dev, struct device *dev,
-		 const char *name, int type)
+	      const char *name, int type)
 {
 	struct hsc_data *hsc;
 	u64 tmp;
@@ -356,9 +360,12 @@ int hsc_probe(struct iio_dev *indio_dev, struct device *dev,
 
 	if (strcasecmp(hsc->range_str, "na") != 0) {
 		// chip should be defined in the nomenclature
-		for (index=0; index<ARRAY_SIZE(hsc_range_config); index++) {
-			if (strcasecmp(hsc_range_config[index].name, hsc->range_str) == 0) {
-				pr_info("hsc found device '%s' under id %d\n", hsc->range_str, index);
+		for (index = 0; index < ARRAY_SIZE(hsc_range_config); index++) {
+			if (strcasecmp
+			    (hsc_range_config[index].name,
+			     hsc->range_str) == 0) {
+				pr_info("hsc found '%s' under id %d\n",
+					hsc->range_str, index);
 				hsc->pmin = hsc_range_config[index].pmin;
 				hsc->pmax = hsc_range_config[index].pmax;
 				found = 1;
@@ -367,7 +374,7 @@ int hsc_probe(struct iio_dev *indio_dev, struct device *dev,
 		}
 		if (hsc->pmin == hsc->pmax || !found)
 			return dev_err_probe(dev, -EINVAL,
-					"honeywell,range_str is invalid\n");
+					     "honeywell,range_str is invalid\n");
 	}
 
 	hsc->outmin = hsc_func_spec[hsc->function].output_min;
@@ -377,12 +384,14 @@ int hsc_probe(struct iio_dev *indio_dev, struct device *dev,
 
 	// multiply with MICRO and then divide by NANO since the output needs
 	// to be in KPa as per IIO ABI requirement
-	tmp = div_s64(((s64)(hsc->pmax - hsc->pmin)) * MICRO,
-				(hsc->outmax - hsc->outmin));
+	tmp = div_s64(((s64) (hsc->pmax - hsc->pmin)) * MICRO,
+		      (hsc->outmax - hsc->outmin));
 	hsc->p_scale = div_s64_rem(tmp, NANO, &hsc->p_scale_nano);
-	tmp = div_s64(((s64) hsc->pmin * (s64)(hsc->outmax - hsc->outmin)) * MICRO,
-				hsc->pmax - hsc->pmin);
-	hsc->p_offset = div_s64_rem(tmp, NANO, &hsc->p_offset_nano) - hsc->outmin;
+	tmp =
+	    div_s64(((s64) hsc->pmin * (s64) (hsc->outmax - hsc->outmin)) *
+		    MICRO, hsc->pmax - hsc->pmin);
+	hsc->p_offset =
+	    div_s64_rem(tmp, NANO, &hsc->p_offset_nano) - hsc->outmin;
 
 	mutex_init(&hsc->lock);
 	indio_dev->name = name;
