@@ -57,54 +57,45 @@ static int hsc_i2c_probe(struct i2c_client *client,
 		return -EOPNOTSUPP;
 	}
 
-	if (dev_fwnode(dev)) {
+	if (!dev_fwnode(dev))
+		return -EOPNOTSUPP;
+
+	ret = device_property_read_u32(dev,
+				       "honeywell,transfer-function",
+				       &hsc->function);
+	if (ret)
+		return dev_err_probe(dev, ret,
+				     "honeywell,transfer-function could not be read\n");
+	if (hsc->function > HSC_FUNCTION_F)
+		return dev_err_probe(dev, -EINVAL,
+				     "honeywell,transfer-function %d invalid\n",
+				     hsc->function);
+
+	ret = device_property_read_string(dev,
+					  "honeywell,range_str", &range_nom);
+	if (ret)
+		return dev_err_probe(dev, ret,
+				     "honeywell,range_str not defined\n");
+
+	// minimal input sanitization
+	memcpy(hsc->range_str, range_nom, HSC_RANGE_STR_LEN - 1);
+	hsc->range_str[HSC_RANGE_STR_LEN - 1] = 0;
+
+	if (strcasecmp(hsc->range_str, "na") == 0) {
+		// "not available"
+		// we got a custom-range chip not covered by the nomenclature
 		ret = device_property_read_u32(dev,
-					       "honeywell,transfer-function",
-					       &hsc->function);
+					     "honeywell,pmin-pascal",
+					     &hsc->pmin);
 		if (ret)
 			return dev_err_probe(dev, ret,
-					     "honeywell,transfer-function could not be read\n");
-		if (hsc->function > HSC_FUNCTION_F)
-			return dev_err_probe(dev, -EINVAL,
-					     "honeywell,transfer-function %d invalid\n",
-					     hsc->function);
-
-		ret = device_property_read_string(dev,
-						  "honeywell,range_str",
-						  &range_nom);
+					     "honeywell,pmin-pascal could not be read\n");
+		ret = device_property_read_u32(dev,
+					     "honeywell,pmax-pascal",
+					     &hsc->pmax);
 		if (ret)
 			return dev_err_probe(dev, ret,
-					     "honeywell,range_str not defined\n");
-
-		// minimal input sanitization
-		memcpy(hsc->range_str, range_nom, HSC_RANGE_STR_LEN - 1);
-		hsc->range_str[HSC_RANGE_STR_LEN - 1] = 0;
-
-		if (strcasecmp(hsc->range_str, "na") == 0) {
-			// "not available"
-			// we got a custom chip not covered by the nomenclature with a custom range
-			ret =
-			    device_property_read_u32(dev,
-						     "honeywell,pmin-pascal",
-						     &hsc->pmin);
-			if (ret)
-				return dev_err_probe(dev, ret,
-						     "honeywell,pmin-pascal could not be read\n");
-			ret =
-			    device_property_read_u32(dev,
-						     "honeywell,pmax-pascal",
-						     &hsc->pmax);
-			if (ret)
-				return dev_err_probe(dev, ret,
-						     "honeywell,pmax-pascal could not be read\n");
-		}
-	} else {
-		/* when loaded as i2c device we need to use default values */
-		dev_notice(dev,
-			   "firmware node not found; unable to use dt options\n");
-		hsc->pmin = 0;
-		hsc->pmax = 172369;
-		hsc->function = HSC_FUNCTION_A;
+					     "honeywell,pmax-pascal could not be read\n");
 	}
 
 	pr_info("hsc id 0x%02x found\n", (u32) id->driver_data);
