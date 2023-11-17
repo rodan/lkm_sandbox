@@ -61,6 +61,7 @@
 		//honeywell,range_str = "NA";
 		//honeywell,pmin-pascal = <0>;
 		//honeywell,pmax-pascal = <206850>;
+		vdd-supply = <&vcc_3v3>;
 	};
 
 };

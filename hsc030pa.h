@@ -2,7 +2,7 @@
 /*
  * Honeywell TruStability HSC Series pressure/temperature sensor
  *
- * Copyright (c) 2023 Petre Rodan <2b4eda@subdimension.ro>
+ * Copyright (c) 2023 Petre Rodan <petre.rodan@subdimension.ro>
  *
  */
 

@@ -53,7 +53,7 @@ EOF
         max=$(printf "%.0f" "${max}")
 
         #echo "${name} ${id} ${min} ${max} ${unit}"
-        echo -e "\t{ .name = \"${name}\", .pmin = ${min}, .pmax = ${max} },"
+        echo -e "\t{.name = \"${name}\", .pmin = ${min}, .pmax = ${max} },"
     done | column -t -R 7,10 | sed 's| \.|.|g;s| = |=|g;s| }|}|;s|^|\t|'
     echo '};'
 

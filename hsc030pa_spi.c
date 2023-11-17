@@ -2,7 +2,7 @@
 /*
  * Honeywell TruStability HSC Series pressure/temperature sensor
  *
- * Copyright (c) 2023 Petre Rodan <2b4eda@subdimension.ro>
+ * Copyright (c) 2023 Petre Rodan <petre.rodan@subdimension.ro>
  *
  * Datasheet: https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/siot/en-us/products/sensors/pressure-sensors/board-mount-pressure-sensors/trustability-hsc-series/documents/sps-siot-trustability-hsc-series-high-accuracy-board-mount-pressure-sensors-50099148-a-en-ciid-151133.pdf
  */
@@ -10,8 +10,8 @@
 #include <linux/module.h>
 #include <linux/spi/spi.h>
 #include <linux/iio/iio.h>
-
-#include "honeywell_hsc.h"
+#include <linux/regulator/consumer.h>
+#include "hsc030pa.h"
 
 static int hsc_spi_xfer(struct hsc_data *data)
 {
@@ -51,6 +51,10 @@ static int hsc_spi_probe(struct spi_device *spi)
 	hsc = iio_priv(indio_dev);
 	hsc->xfer = hsc_spi_xfer;
 	hsc->client = spi;
+
+	ret = devm_regulator_get_enable_optional(dev, "vdd");
+	if (ret == -EPROBE_DEFER)
+		return -EPROBE_DEFER;
 
 	ret = device_property_read_u32(dev,
 				       "honeywell,transfer-function",
@@ -119,7 +123,7 @@ static struct spi_driver hsc_spi_driver = {
 
 module_spi_driver(hsc_spi_driver);
 
-MODULE_AUTHOR("Petre Rodan <2b4eda@subdimension.ro>");
+MODULE_AUTHOR("Petre Rodan <petre.rodan@subdimension.ro>");
 MODULE_DESCRIPTION("Honeywell HSC pressure sensor spi driver");
 MODULE_LICENSE("GPL");
 MODULE_IMPORT_NS(IIO_HONEYWELL_HSC);

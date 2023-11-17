@@ -2,10 +2,7 @@
 /*
  * Honeywell TruStability HSC Series pressure/temperature sensor
  *
- * Copyright (c) 2023 Petre Rodan <2b4eda@subdimension.ro>
- *
- * (7-bit I2C slave address can be 0x28, 0x38, 0x48, 0x58,
- *                                    0x68, 0x78, 0x88 or 0x98)
+ * Copyright (c) 2023 Petre Rodan <petre.rodan@subdimension.ro>
  *
  * Datasheet: https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/siot/en-us/products/sensors/pressure-sensors/board-mount-pressure-sensors/trustability-hsc-series/documents/sps-siot-trustability-hsc-series-high-accuracy-board-mount-pressure-sensors-50099148-a-en-ciid-151133.pdf
  * i2c-related datasheet: https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/siot/en-us/products/sensors/pressure-sensors/board-mount-pressure-sensors/common/documents/sps-siot-i2c-comms-digital-output-pressure-sensors-tn-008201-3-en-ciid-45841.pdf
@@ -14,9 +11,9 @@
 #include <linux/i2c.h>
 #include <linux/module.h>
 #include <linux/mod_devicetable.h>
+#include <linux/regulator/consumer.h>
 #include <linux/iio/iio.h>
-
-#include "honeywell_hsc.h"
+#include "hsc030pa.h"
 
 static int hsc_i2c_xfer(struct hsc_data *data)
 {
@@ -55,6 +52,10 @@ static int hsc_i2c_probe(struct i2c_client *client,
 		hsc->xfer = hsc_i2c_xfer;
 	else
 		return -EOPNOTSUPP;
+
+	ret = devm_regulator_get_enable_optional(dev, "vdd");
+	if (ret == -EPROBE_DEFER)
+		return -EPROBE_DEFER;
 
 	if (!dev_fwnode(dev))
 		return -EOPNOTSUPP;
@@ -131,7 +132,7 @@ static struct i2c_driver hsc_i2c_driver = {
 
 module_i2c_driver(hsc_i2c_driver);
 
-MODULE_AUTHOR("Petre Rodan <2b4eda@subdimension.ro>");
+MODULE_AUTHOR("Petre Rodan <petre.rodan@subdimension.ro>");
 MODULE_DESCRIPTION("Honeywell HSC pressure sensor i2c driver");
 MODULE_LICENSE("GPL");
 MODULE_IMPORT_NS(IIO_HONEYWELL_HSC);
