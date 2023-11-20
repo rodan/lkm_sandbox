@@ -53,15 +53,18 @@
 		compatible = "honeywell,hsc";
 		reg = <0>;
 		spi-max-frequency = <800000>;
+
 		honeywell,transfer-function = <0>;
 		honeywell,range_str = "100PA";
+
 		// in case of a custom range, use NA as range_str
 		// and populate pmin-pascal and pmax-pascal
 		// with the range limits converted into pascals
 		//honeywell,range_str = "NA";
 		//honeywell,pmin-pascal = <0>;
 		//honeywell,pmax-pascal = <206850>;
-		vdd-supply = <&vcc_3v3>;
+
+		//vdd-supply = <&foo>;
 	};
 
 };

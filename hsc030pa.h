@@ -6,8 +6,8 @@
  *
  */
 
-#ifndef _HONEYWELL_HSC_H
-#define _HONEYWELL_HSC_H
+#ifndef _HSC030PA_H
+#define _HSC030PA_H
 
 #define  HSC_REG_MEASUREMENT_RD_SIZE  4         // get all conversions in one go since transfers are not address-based
 #define            HSC_RANGE_STR_LEN  6

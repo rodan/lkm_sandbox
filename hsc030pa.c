@@ -195,10 +195,6 @@ static int hsc_get_measurement(struct hsc_data *data)
 	if (ret < 0)
 		return ret;
 
-	pr_info("recvd %02x %02x %02x %02x, status %02x\n", data->buffer[0],
-		data->buffer[1], data->buffer[2], data->buffer[3],
-		chip->valid(data));
-
 	ret = chip->valid(data);
 	if (!ret)
 		return -EAGAIN;
@@ -359,8 +355,6 @@ int hsc_probe(struct iio_dev *indio_dev, struct device *dev,
 			if (strcasecmp
 			    (hsc_range_config[index].name,
 			     hsc->range_str) == 0) {
-				pr_info("hsc found '%s' under id %d\n",
-					hsc->range_str, index);
 				hsc->pmin = hsc_range_config[index].pmin;
 				hsc->pmax = hsc_range_config[index].pmax;
 				found = 1;
@@ -374,8 +368,6 @@ int hsc_probe(struct iio_dev *indio_dev, struct device *dev,
 
 	hsc->outmin = hsc_func_spec[hsc->function].output_min;
 	hsc->outmax = hsc_func_spec[hsc->function].output_max;
-
-	pr_info("hsc out %d - %d\n", hsc->outmin, hsc->outmax);
 
 	// multiply with MICRO and then divide by NANO since the output needs
 	// to be in KPa as per IIO ABI requirement
@@ -406,5 +398,5 @@ void hsc_remove(struct iio_dev *indio_dev)
 EXPORT_SYMBOL_NS(hsc_remove, IIO_HONEYWELL_HSC);
 
 MODULE_AUTHOR("Petre Rodan <petre.rodan@subdimension.ro>");
-MODULE_DESCRIPTION("Honeywell HSC pressure sensor core driver");
+MODULE_DESCRIPTION("Honeywell HSC and SSC pressure sensor core driver");
 MODULE_LICENSE("GPL");

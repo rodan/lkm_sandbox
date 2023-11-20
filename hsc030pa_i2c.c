@@ -77,7 +77,6 @@ static int hsc_i2c_probe(struct i2c_client *client,
 		return dev_err_probe(dev, ret,
 				     "honeywell,range_str not defined\n");
 
-	// minimal input sanitization
 	memcpy(hsc->range_str, range_nom, HSC_RANGE_STR_LEN - 1);
 	hsc->range_str[HSC_RANGE_STR_LEN - 1] = 0;
 
@@ -98,7 +97,6 @@ static int hsc_i2c_probe(struct i2c_client *client,
 					     "honeywell,pmax-pascal could not be read\n");
 	}
 
-	pr_info("hsc id 0x%02x found\n", (u32) id->driver_data);
 	i2c_set_clientdata(client, indio_dev);
 	hsc->client = client;
 
@@ -133,6 +131,6 @@ static struct i2c_driver hsc_i2c_driver = {
 module_i2c_driver(hsc_i2c_driver);
 
 MODULE_AUTHOR("Petre Rodan <petre.rodan@subdimension.ro>");
-MODULE_DESCRIPTION("Honeywell HSC pressure sensor i2c driver");
+MODULE_DESCRIPTION("Honeywell HSC and SSC pressure sensor i2c driver");
 MODULE_LICENSE("GPL");
 MODULE_IMPORT_NS(IIO_HONEYWELL_HSC);
