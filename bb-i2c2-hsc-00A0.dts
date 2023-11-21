@@ -19,21 +19,21 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 
-	HSCMRNN030PA2A3@28 {
-		status = "okay";
-		compatible = "honeywell,hsc";
+	pressure@28 {
+		compatible = "honeywell,hsc030pa";
 		reg = <0x28>;
 
 		honeywell,transfer-function = <0>;
-		honeywell,range_str = "030PA";
+		honeywell,pressure-triplet = "030PA";
 
-		// in case of a custom chip, use NA as range_str
+		// in case of a custom chip, use NA as pressure-triplet
 		// and populate pmin-pascal and pmax-pascal
 		// with the range limits converted into pascals
-		//honeywell,range_str = "NA";
+		//honeywell,pressure-triplet = "NA";
 		//honeywell,pmin-pascal = <0>;
 		//honeywell,pmax-pascal = <206850>;
 
 		//vdd-supply = <&foo>;
+		status = "okay";
 	};
 };

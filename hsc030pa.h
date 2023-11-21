@@ -3,53 +3,73 @@
  * Honeywell TruStability HSC Series pressure/temperature sensor
  *
  * Copyright (c) 2023 Petre Rodan <petre.rodan@subdimension.ro>
- *
  */
 
 #ifndef _HSC030PA_H
 #define _HSC030PA_H
 
-#define  HSC_REG_MEASUREMENT_RD_SIZE  4         // get all conversions in one go since transfers are not address-based
-#define            HSC_RANGE_STR_LEN  6
+#include <linux/property.h>
+#include <linux/types.h>
+
+/* get all conversions (4 bytes) in one go since transfers are not address-based */
+#define  HSC_REG_MEASUREMENT_RD_SIZE  4
+#define     HSC_PRESSURE_TRIPLET_LEN  6
+
+struct device;
+
+struct iio_chan_spec;
+struct iio_dev;
 
 struct hsc_chip_data;
 
+/**
+ * struct hsc_data
+ * @client: either i2c or spi kernel interface struct for current dev
+ * @lock: lock protecting chip reads
+ * @xfer: function that implements the chip reads
+ * @is_valid: false if last transfer has failed
+ * @last_update: time of last successful conversion
+ * @buffer: raw conversion data
+ * @pmin: minimum measurable pressure limit
+ * @pmax: maximum measurable pressure limit
+ * @outmin: minimum raw pressure in counts (based on transfer function)
+ * @outmax: maximum raw pressure in counts (based on transfer function)
+ * @function: transfer function
+ * @p_scale: pressure scale
+ * @p_scale_nano: pressure scale, decimal places
+ * @p_offset: pressure offset
+ * @p_offset_nano: pressure offset, decimal places
+ */
 struct hsc_data {
-	void *client;                           // either i2c or spi kernel interface struct for current dev
+	void *client;
 	const struct hsc_chip_data *chip;
-	struct mutex lock;                      // lock protecting chip reads
-	int (*xfer)(struct hsc_data *data);    // function that implements the chip reads
-	bool is_valid;                          // false if last transfer has failed
-	unsigned long last_update;              // time of last successful conversion
-	u8 buffer[HSC_REG_MEASUREMENT_RD_SIZE]; // raw conversion data
-	char range_str[HSC_RANGE_STR_LEN];	// range as defined by the chip nomenclature - ie "030PA" or "NA"
-	s32 pmin;                               // min pressure limit
-	s32 pmax;                               // max pressure limit
-	u32 outmin;                             // minimum raw pressure in counts (based on transfer function)
-	u32 outmax;                             // maximum raw pressure in counts (based on transfer function)
-	u32 function;                           // transfer function
-	s64 p_scale;                            // pressure scale
-	s32 p_scale_nano;                       // pressure scale, decimal places
-	s64 p_offset;                           // pressure offset
-	s32 p_offset_nano;                      // pressure offset, decimal places
+	struct mutex lock;
+	int (*xfer)(struct hsc_data *data);
+	bool is_valid;
+	unsigned long last_update;
+	u8 buffer[HSC_REG_MEASUREMENT_RD_SIZE];
+	s32 pmin;
+	s32 pmax;
+	u32 outmin;
+	u32 outmax;
+	u32 function;
+	s64 p_scale;
+	s32 p_scale_nano;
+	s64 p_offset;
+	s32 p_offset_nano;
 };
 
 struct hsc_chip_data {
-	bool (*valid)(struct hsc_data *data);  // function that checks the two status bits
-	const struct iio_chan_spec *channels;   // channel specifications
-	u8 num_channels;                        // pressure and temperature channels
+	bool (*valid)(struct hsc_data *data);
+	const struct iio_chan_spec *channels;
+	u8 num_channels;
 };
 
 enum hsc_func_id {
 	HSC_FUNCTION_A,
 	HSC_FUNCTION_B,
 	HSC_FUNCTION_C,
-	HSC_FUNCTION_F
-};
-
-enum hsc_variant {
-	HSC,
-	SSC
+	HSC_FUNCTION_F,
 };
 
 int hsc_probe(struct iio_dev *indio_dev, struct device *dev,
