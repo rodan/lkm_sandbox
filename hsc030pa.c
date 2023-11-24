@@ -256,11 +256,9 @@ static int hsc_read_raw(struct iio_dev *indio_dev,
 			    (data->buffer[2] << 3) +
 			    ((data->buffer[3] & 0xe0) >> 5);
 			return IIO_VAL_INT;
-			break;
 		default:
 			return -EINVAL;
 		}
-		break;
 
 /**
  *	IIO ABI expects

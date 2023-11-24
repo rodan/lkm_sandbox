@@ -31,12 +31,12 @@ static int hsc_i2c_xfer(struct hsc_data *data)
 	return (ret == 2) ? 0 : ret;
 }
 
-static int hsc_i2c_probe(struct i2c_client *client,
-			 const struct i2c_device_id *id)
+static int hsc_i2c_probe(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
 	struct iio_dev *indio_dev;
 	struct hsc_data *hsc;
+	const struct i2c_device_id *id = i2c_client_get_device_id(client);
 	const char *triplet;
 	int ret;
 

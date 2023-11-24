@@ -5,12 +5,13 @@
 
 /*
  * Helper to show loaded overlays under: /proc/device-tree/chosen/overlays/
- */
+
 &{/chosen} {
 	overlays {
 		bb-i2c2-hsc-00A0.kernel = __TIMESTAMP__;
 	};
 };
+*/
 
 &i2c2 {
 	status = "okay";
