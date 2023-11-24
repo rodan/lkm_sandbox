@@ -9,18 +9,25 @@ both i2c and spi interface versions are covered by this library.
 ```
 &i2cX {
         status = "okay";
-
-        clock-frequency = <400000>;
-
         #address-cells = <1>;
         #size-cells = <0>;
 
-        hsc@ADDR {
-                status = "okay";
-                compatible = "honeywell,hsc";
+        pressure@ADDR {
+                compatible = "honeywell,hsc030pa";
                 reg = <ADDR>;
+
                 honeywell,transfer-function = <TRANSFER_FUNCTION_ID>;
-                honeywell,range_str = "VARIANT";
+                honeywell,pressure-triplet = "VARIANT";
+
+                // in case of a custom chip, use NA as pressure-triplet
+                // and populate pmin-pascal and pmax-pascal
+                // with the range limits converted into pascals
+                //honeywell,pressure-triplet = "NA";
+                //honeywell,pmin-pascal = <0>;
+                //honeywell,pmax-pascal = <206850>;
+
+                //vdd-supply = <&foo>;
+                status = "okay";
         };
 };
 ```
@@ -46,7 +53,7 @@ in case it's a custom chip with a different measurement range, then set ```NA```
 ```
         hsc@ADDR {
                 status = "okay";
-                compatible = "honeywell,hsc";
+                compatible = "honeywell,hsc030pa";
                 reg = <ADDR>;
                 honeywell,transfer-function = <TRANSFER_FUNCTION_ID>;
                 honeywell,range_str = "NA";
@@ -64,23 +71,23 @@ iio_info version: 0.25 (git tag:v0.25)
 Libiio version: 0.25 (git tag: v0.25) backends: local xml ip usb
 IIO context created with local backend.
 Backend version: 0.25 (git tag: v0.25)
-Backend description string: Linux beagle 6.1.38+ #3 PREEMPT Tue Oct 10 19:39:56 -00 2023 armv7l
+Backend description string: Linux beagle 6.7.0-rc2+ #2 PREEMPT Fri Nov 24 09:41:10 -00 2023 armv7l
 IIO context has 2 attributes:
-        local,kernel: 6.1.38+
+        local,kernel: 6.7.0-rc2+
         uri: local:
-IIO context has 1 devices:
+IIO context has 2 devices:
         iio:device0: hsc030pa
                 2 channels found:
                         temp:  (input)
                         3 channel-specific attributes found:
                                 attr  0: offset value: -511.749774830
-                                attr  1: raw value: 756
+                                attr  1: raw value: 755
                                 attr  2: scale value: 97.703957
                         pressure:  (input)
                         3 channel-specific attributes found:
                                 attr  0: offset value: -1638.000000000
-                                attr  1: raw value: 7787
-                                attr  2: scale value: 0.015781643
+                                attr  1: raw value: 7727
+                                attr  2: scale value: 0.015780439
                 1 device-specific attributes found:
                                 attr  0: waiting_for_supplier value: 0
                 No trigger on this device
