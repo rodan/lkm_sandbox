@@ -37,8 +37,6 @@ static int hsc_i2c_probe(struct i2c_client *client)
 	struct iio_dev *indio_dev;
 	struct hsc_data *hsc;
 	const struct i2c_device_id *id = i2c_client_get_device_id(client);
-	const char *triplet;
-	int ret;
 
 	indio_dev = devm_iio_device_alloc(dev, sizeof(*hsc));
 	if (!indio_dev)
@@ -50,26 +48,6 @@ static int hsc_i2c_probe(struct i2c_client *client)
 		return -EOPNOTSUPP;
 
 	hsc->xfer = hsc_i2c_xfer;
-
-	if (!dev_fwnode(dev))
-		return -EOPNOTSUPP;
-
-	ret = device_property_read_u32(dev,
-				       "honeywell,transfer-function",
-				       &hsc->function);
-	if (ret)
-		return dev_err_probe(dev, ret,
-				     "honeywell,transfer-function could not be read\n");
-	if (hsc->function > HSC_FUNCTION_F)
-		return dev_err_probe(dev, -EINVAL,
-				     "honeywell,transfer-function %d invalid\n",
-				     hsc->function);
-
-	ret = device_property_read_string(dev, "honeywell,pressure-triplet", &triplet);
-	if (ret)
-		return dev_err_probe(dev, ret,
-				     "honeywell,pressure-triplet not defined\n");
-
 	hsc->client = client;
 
 	return hsc_probe(indio_dev, &client->dev, id->name, id->driver_data);

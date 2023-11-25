@@ -7,12 +7,17 @@
  * Datasheet: https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/siot/en-us/products/sensors/pressure-sensors/board-mount-pressure-sensors/trustability-hsc-series/documents/sps-siot-trustability-hsc-series-high-accuracy-board-mount-pressure-sensors-50099148-a-en-ciid-151133.pdf
  */
 
+#include <linux/array_size.h>
+#include <linux/bitfield.h>
+#include <linux/bits.h>
+#include <linux/cleanup.h>
 #include <linux/init.h>
 #include <linux/math64.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/printk.h>
+#include <linux/regulator/consumer.h>
 #include <linux/string.h>
 #include <linux/types.h>
 #include <linux/units.h>
@@ -20,7 +25,14 @@
 #include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
 
+#include <asm/unaligned.h>
+
 #include "hsc030pa.h"
+
+#define     HSC_PRESSURE_TRIPLET_LEN  6
+#define              HSC_STATUS_MASK  GENMASK(7, 6)
+#define         HSC_TEMPERATURE_MASK  GENMASK(15, 5)
+#define            HSC_PRESSURE_MASK  GENMASK(29, 16)
 
 struct hsc_func_spec {
 	u32 output_min;
@@ -187,7 +199,7 @@ static const struct hsc_range_config hsc_range_config[] = {
  */
 static bool hsc_measurement_is_valid(struct hsc_data *data)
 {
-	return !(data->buffer[0] & 0xc0);
+	return !(data->buffer[0] & HSC_STATUS_MASK);
 }
 
 static int hsc_get_measurement(struct hsc_data *data)
@@ -200,6 +212,7 @@ static int hsc_get_measurement(struct hsc_data *data)
 
 	data->last_update = jiffies;
 
+	guard(mutex)(&data->lock);
 	ret = data->xfer(data);
 	if (ret < 0)
 		return ret;
@@ -211,50 +224,30 @@ static int hsc_get_measurement(struct hsc_data *data)
 	return 0;
 }
 
-/*
- * 4 bytes are read, the dissection looks like
- *
- * .  0  .  1  .  2  .  3  .  4  .  5  .  6  .  7  .
- * byte 0:
- * |  s1 |  s0 | b13 | b12 | b11 | b10 |  b9 |  b8 |
- * | status    | bridge data (pressure) MSB        |
- * byte 1:
- * |  b7 |  b6 |  b5 |  b4 |  b3 |  b2 |  b1 |  b0 |
- * | bridge data (pressure) LSB                    |
- * byte 2:
- * | t10 |  t9 |  t8 |  t7 |  t6 |  t5 |  t4 |  t3 |
- * | temperature data MSB                          |
- * byte 3:
- * |  t2 |  t1 |  t0 |  X  |  X  |  X  |  X  |  X  |
- * | temperature LSB | ignore                      |
- *
- * .  0  .  1  .  2  .  3  .  4  .  5  .  6  .  7  .
- */
 static int hsc_read_raw(struct iio_dev *indio_dev,
 			struct iio_chan_spec const *channel, int *val,
 			int *val2, long mask)
 {
 	struct hsc_data *data = iio_priv(indio_dev);
 	int ret;
+	u32 xfer;
+	int raw;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		mutex_lock(&data->lock);
 		ret = hsc_get_measurement(data);
-		mutex_unlock(&data->lock);
-
 		if (ret)
 			return ret;
 
+		xfer = get_unaligned_be32(data->buffer);
 		switch (channel->type) {
 		case IIO_PRESSURE:
-			*val =
-			    ((data->buffer[0] & 0x3f) << 8) + data->buffer[1];
+			raw = FIELD_GET(HSC_PRESSURE_MASK, xfer);
+			*val = raw;
 			return IIO_VAL_INT;
 		case IIO_TEMP:
-			*val =
-			    (data->buffer[2] << 3) +
-			    ((data->buffer[3] & 0xe0) >> 5);
+			raw = FIELD_GET(HSC_TEMPERATURE_MASK, xfer);
+			*val = raw;
 			return IIO_VAL_INT;
 		default:
 			return -EINVAL;
@@ -347,27 +340,44 @@ int hsc_probe(struct iio_dev *indio_dev, struct device *dev,
 	hsc->last_update = jiffies - HZ;
 	hsc->chip = &hsc_chip;
 
-	device_property_read_string(dev, "honeywell,pressure-triplet", &triplet);
+	ret = device_property_read_u32(dev,
+				       "honeywell,transfer-function",
+				       &hsc->function);
+	if (ret)
+		return dev_err_probe(dev, ret,
+			    "honeywell,transfer-function could not be read\n");
+	if (hsc->function > HSC_FUNCTION_F)
+		return dev_err_probe(dev, -EINVAL,
+				     "honeywell,transfer-function %d invalid\n",
+				     hsc->function);
 
-	if (strcasecmp(triplet, "na") == 0) {
+	ret = device_property_read_string(dev,
+		"honeywell,pressure-triplet", &triplet);
+	if (ret)
+		return dev_err_probe(dev, ret,
+			"honeywell,pressure-triplet could not be read\n");
+
+	if (strncmp(triplet, "NA", 2) == 0) {
 		// "not available" in the nomenclature
 		// we got a custom-range chip so extract pmin, pmax from dt
 		ret = device_property_read_u32(dev,
-					     "honeywell,pmin-pascal",
-					     &hsc->pmin);
+					       "honeywell,pmin-pascal",
+					       &hsc->pmin);
 		if (ret)
 			return dev_err_probe(dev, ret,
 				"honeywell,pmin-pascal could not be read\n");
 		ret = device_property_read_u32(dev,
-				"honeywell,pmax-pascal",
-				&hsc->pmax);
+					       "honeywell,pmax-pascal",
+					       &hsc->pmax);
 		if (ret)
 			return dev_err_probe(dev, ret,
 				"honeywell,pmax-pascal could not be read\n");
 	} else {
 		// chip should be defined in the nomenclature
 		for (index = 0; index < ARRAY_SIZE(hsc_range_config); index++) {
-			if (strcasecmp(hsc_range_config[index].name,triplet) == 0) {
+			if (strncmp(hsc_range_config[index].name,
+					triplet,
+					HSC_PRESSURE_TRIPLET_LEN - 1) == 0) {
 				hsc->pmin = hsc_range_config[index].pmin;
 				hsc->pmax = hsc_range_config[index].pmax;
 				found = 1;
@@ -376,7 +386,7 @@ int hsc_probe(struct iio_dev *indio_dev, struct device *dev,
 		}
 		if (hsc->pmin == hsc->pmax || !found)
 			return dev_err_probe(dev, -EINVAL,
-					     "honeywell,pressure-triplet is invalid\n");
+				"honeywell,pressure-triplet is invalid\n");
 	}
 
 	hsc->outmin = hsc_func_spec[hsc->function].output_min;
@@ -392,6 +402,10 @@ int hsc_probe(struct iio_dev *indio_dev, struct device *dev,
 		    MICRO, hsc->pmax - hsc->pmin);
 	hsc->p_offset =
 	    div_s64_rem(tmp, NANO, &hsc->p_offset_nano) - hsc->outmin;
+
+	ret = devm_regulator_get_enable_optional(dev, "vdd");
+	if (ret != -ENODEV)
+		return ret;
 
 	mutex_init(&hsc->lock);
 	indio_dev->name = name;

@@ -11,9 +11,11 @@
 #include <linux/property.h>
 #include <linux/types.h>
 
-/* get all conversions (4 bytes) in one go since transfers are not address-based */
+/**
+ * get all conversions (4 bytes) in one go
+ * since transfers are not address-based
+*/
 #define  HSC_REG_MEASUREMENT_RD_SIZE  4
-#define     HSC_PRESSURE_TRIPLET_LEN  6
 
 struct device;
 
@@ -74,6 +76,5 @@ enum hsc_func_id {
 
 int hsc_probe(struct iio_dev *indio_dev, struct device *dev,
 	      const char *name, int type);
-void hsc_remove(struct iio_dev *indio_dev);
 
 #endif

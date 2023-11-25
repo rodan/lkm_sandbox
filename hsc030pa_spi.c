@@ -29,8 +29,6 @@ static int hsc_spi_probe(struct spi_device *spi)
 {
 	struct iio_dev *indio_dev;
 	struct hsc_data *hsc;
-	const char *triplet;
-	int ret;
 	struct device *dev = &spi->dev;
 
 	indio_dev = devm_iio_device_alloc(dev, sizeof(*hsc));
@@ -41,30 +39,13 @@ static int hsc_spi_probe(struct spi_device *spi)
 	hsc->xfer = hsc_spi_xfer;
 	hsc->client = spi;
 
-	ret = device_property_read_u32(dev,
-				       "honeywell,transfer-function",
-				       &hsc->function);
-	if (ret)
-		return dev_err_probe(dev, ret,
-				     "honeywell,transfer-function could not be read\n");
-	if (hsc->function > HSC_FUNCTION_F)
-		return dev_err_probe(dev, -EINVAL,
-				     "honeywell,transfer-function %d invalid\n",
-				     hsc->function);
-
-	ret =
-	    device_property_read_string(dev, "honeywell,pressure-triplet", &triplet);
-	if (ret)
-		return dev_err_probe(dev, ret,
-				     "honeywell,pressure-triplet not defined\n");
-
 	return hsc_probe(indio_dev, &spi->dev, spi_get_device_id(spi)->name,
 			 spi_get_device_id(spi)->driver_data);
 }
 
 static const struct of_device_id hsc_spi_match[] = {
 	{.compatible = "honeywell,hsc030pa",},
-	{},
+	{}
 };
 MODULE_DEVICE_TABLE(of, hsc_spi_match);
 

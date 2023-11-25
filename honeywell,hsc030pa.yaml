@@ -8,7 +8,7 @@ title: Honeywell TruStability HSC and SSC pressure sensor families
 
 description: |
   support for Honeywell TruStability HSC and SSC digital pressure sensor
-  families.
+  series.
 
   These sensors have either an I2C, an SPI or an analog interface. Only the
   digital versions are supported by this driver.
@@ -18,10 +18,10 @@ description: |
   identical programming model but differ in pressure range, unit and transfer
   function.
 
-  To support different models one need to specify the pressure range as well as
-  the transfer function. Pressure range can either be provided via
-  pressure-triplet or in case it's a custom chip via numerical range limits
-  converted to pascals.
+  To support different models one needs to specify the pressure range as well
+  as the transfer function. Pressure range can either be provided via
+  pressure-triplet (directly extracted from the part number) or in case it's
+  a custom chip via numerical range limits converted to pascals.
 
   The transfer function defines the ranges of raw conversion values delivered
   by the sensor. pmin-pascal and pmax-pascal corespond to the minimum and
@@ -86,6 +86,10 @@ properties:
       Maximum pressure value the sensor can measure in pascal.
       To be specified only if honeywell,pressure-triplet is set to "NA".
     $ref: /schemas/types.yaml#/definitions/int32
+
+  vdd-supply:
+    description:
+      Provide VDD power to the sensor (either 3.3V or 5V depending on the chip)
 
   spi-max-frequency:
     maximum: 800000

@@ -1,10 +1,11 @@
 *.cmd
 *.ko
 *.o
+.*.o.d
 *.mod
 *.mod.*
 modules.order
 *.swp
 *~
 Module.symvers
-attic
+build
