@@ -9,9 +9,9 @@ create_c_file()
     cat << EOF
 
 struct hsc_range_config {
-	char name[HSC_RANGE_STR_LEN];
-	int pmin;
-	int pmax;
+	char name[HSC_PRESSURE_TRIPLET_LEN];
+	s32 pmin;
+	u32 pmax;
 };
 
 // all values have been converted to pascals
@@ -53,57 +53,8 @@ EOF
         max=$(printf "%.0f" "${max}")
 
         #echo "${name} ${id} ${min} ${max} ${unit}"
-        echo -e "\t{ .name = \"${name}\", .pmin = ${min}, .pmax = ${max} },"
-    done | column -t -R 7,10 | sed 's| \.|.|g;s| = |=|g;s| }|}|;s|^|\t|'
-    echo '};'
-
-    cat << EOF
-
-enum hsc_variant {
-EOF
-    i=0
-    cat "${input_file}" | while read -r line; do
-        echo "${i}%6" | bc | grep -q '^0$' && echo -en '\t'
-        name=$(echo "${line}" | awk '{ print $1}')
-        id=$(echo "HSC${name}" | sed 's|\.|_|')
-        echo -n " ${id},"
-        echo "${i}%6" | bc | grep -q '^5$' && echo ''
-        i=$((i+1))
-    done
-    echo -e '\n};'
-
-    cat << EOF
-
-static const struct of_device_id hsc_of_match[] = {
-EOF
-    i=0
-    cat "${input_file}" | while read -r line; do
-        echo "${i}%2" | bc | grep -q '^0$' && echo -en '\t'
-        name=$(echo "${line}" | awk '{ print $1}')
-        id=$(echo "HSC${name}" | sed 's|\.|_|')
-        id_low="hsc$(echo ${name} | tr '[:upper:]' '[:lower:]')"
-        echo -n "{ .compatible = \"honeywell,${id_low}\",}, "
-        echo "${i}%2" | bc | grep -q '^1$' && echo ''
-        i=$((i+1))
-    done
-    echo -e '\t{}'
-    echo '};'
-
-    cat << EOF
-
-static const struct i2c_device_id hsc_id[] = {
-EOF
-    i=0
-    cat "${input_file}" | while read -r line; do
-        echo "${i}%2" | bc | grep -q '^0$' && echo -en '\t'
-        name=$(echo "${line}" | awk '{ print $1}')
-        id=$(echo "HSC${name}" | sed 's|\.|_|')
-        id_low="hsc$(echo ${name} | tr '[:upper:]' '[:lower:]')"
-        echo -n "{ \"${id_low}\", ${id} }, "
-        echo "${i}%2" | bc | grep -q '^1$' && echo ''
-        i=$((i+1))
-    done
-    echo -e '\t{}'
+        echo -e "\t{.name = \"${name}\", .pmin = ${min}, .pmax = ${max} },"
+    done | column -t -R 6,9 | sed 's| \.|.|g;s| = |=|g;s| }|}|;s|^|\t|'
     echo '};'
 }
 

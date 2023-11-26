@@ -54,7 +54,8 @@ static const struct hsc_func_spec hsc_func_spec[] = {
 
 /**
  * struct hsc_range_config - pressure ranges based on the nomenclature
- * @name: 5-char string triplet that defines the range, measurement unit and type
+ * @name: 5-char string triplet that defines the range, measurement unit
+ *        and type
  * @pmin: lowest pressure that can be measured
  * @pmax: highest pressure that can be measured
  */
@@ -187,7 +188,7 @@ static const struct hsc_range_config hsc_range_config[] = {
 };
 
 /*
- * hsc_measurement_is_valid() - validate last conversion by checking the status bits
+ * hsc_measurement_is_valid() - validate last conversion via status bits
  * @data: structure containing instantiated sensor data
  * Return: true only if both status bits are zero
  *
@@ -206,11 +207,6 @@ static int hsc_get_measurement(struct hsc_data *data)
 {
 	const struct hsc_chip_data *chip = data->chip;
 	int ret;
-
-	if (!time_after(jiffies, data->last_update + HZ))
-		return data->is_valid ? 0 : -EAGAIN;
-
-	data->last_update = jiffies;
 
 	guard(mutex)(&data->lock);
 	ret = data->xfer(data);
@@ -254,24 +250,24 @@ static int hsc_read_raw(struct iio_dev *indio_dev,
 		}
 
 /**
- *	IIO ABI expects
- *	value = (conv + offset) * scale
+ * IIO ABI expects
+ * value = (conv + offset) * scale
  *
- *	datasheet provides the following formula for determining the temperature
- *	temp[C] = conv * a + b
- *        where a = 200/2047; b = -50
+ * datasheet provides the following formula for determining the temperature
+ * temp[C] = conv * a + b
+ *   where a = 200/2047; b = -50
  *
- *	temp[C] = (conv + (b/a)) * a * (1000)
- *      =>
- *	scale = a * 1000 = .097703957 * 1000 = 97.703957
- *	offset = b/a = -50 / .097703957 = -50000000 / 97704
+ *  temp[C] = (conv + (b/a)) * a * (1000)
+ *  =>
+ *  scale = a * 1000 = .097703957 * 1000 = 97.703957
+ *  offset = b/a = -50 / .097703957 = -50000000 / 97704
  *
- *	based on the datasheet
- *	pressure = (conv - HSC_OUTPUT_MIN) * Q + Pmin =
- *	           ((conv - HSC_OUTPUT_MIN) + Pmin/Q) * Q
- *	=>
- *	scale = Q = (Pmax - Pmin) / (HSC_OUTPUT_MAX - HSC_OUTPUT_MIN)
- *	offset = Pmin/Q = Pmin * (HSC_OUTPUT_MAX - HSC_OUTPUT_MIN) / (Pmax - Pmin)
+ *  based on the datasheet
+ *  pressure = (conv - Omin) * Q + Pmin =
+ *          ((conv - Omin) + Pmin/Q) * Q
+ *  =>
+ *  scale = Q = (Pmax - Pmin) / (Omax - Omin)
+ *  offset = Pmin/Q - Omin = Pmin * (Omax - Omin) / (Pmax - Pmin) - Omin
  */
 
 	case IIO_CHAN_INFO_SCALE:
@@ -307,11 +303,9 @@ static int hsc_read_raw(struct iio_dev *indio_dev,
 }
 
 static const struct iio_chan_spec hsc_channels[] = {
-	{.type = IIO_PRESSURE,
-	 .info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
+	{.type = IIO_PRESSURE, .info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
 	 BIT(IIO_CHAN_INFO_SCALE) | BIT(IIO_CHAN_INFO_OFFSET) },
-	{.type = IIO_TEMP,
-	 .info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
+	{.type = IIO_TEMP, .info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
 	 BIT(IIO_CHAN_INFO_SCALE) | BIT(IIO_CHAN_INFO_OFFSET) },
 };
 
@@ -336,8 +330,6 @@ int hsc_probe(struct iio_dev *indio_dev, struct device *dev,
 	int ret;
 
 	hsc = iio_priv(indio_dev);
-
-	hsc->last_update = jiffies - HZ;
 	hsc->chip = &hsc_chip;
 
 	ret = device_property_read_u32(dev,

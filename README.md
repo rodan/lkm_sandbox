@@ -57,8 +57,8 @@ in case it's a custom chip with a different measurement range, then set ```NA```
                 reg = <ADDR>;
                 honeywell,transfer-function = <TRANSFER_FUNCTION_ID>;
                 honeywell,range_str = "NA";
-                honeywell,pmin-pascal = <0>;
-                honeywell,pmax-pascal = <206850>;
+                honeywell,pmin-pascal = <(-4000000)>;
+                honeywell,pmax-pascal = <200000>;
         };
 ```
 

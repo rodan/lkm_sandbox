@@ -126,7 +126,7 @@ examples:
             spi-max-frequency = <800000>;
             honeywell,transfer-function = <0>;
             honeywell,pressure-triplet = "NA";
-            honeywell,pmin-pascal = <(-4000000)>;
+            honeywell,pmin-pascal = <0>;
             honeywell,pmax-pascal = <200000>;
         };
     };

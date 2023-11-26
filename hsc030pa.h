@@ -30,7 +30,6 @@ struct hsc_chip_data;
  * @lock: lock protecting chip reads
  * @xfer: function that implements the chip reads
  * @is_valid: false if last transfer has failed
- * @last_update: time of last successful conversion
  * @buffer: raw conversion data
  * @pmin: minimum measurable pressure limit
  * @pmax: maximum measurable pressure limit
@@ -48,7 +47,6 @@ struct hsc_data {
 	struct mutex lock;
 	int (*xfer)(struct hsc_data *data);
 	bool is_valid;
-	unsigned long last_update;
 	u8 buffer[HSC_REG_MEASUREMENT_RD_SIZE];
 	s32 pmin;
 	s32 pmax;
