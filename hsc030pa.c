@@ -61,7 +61,7 @@ static const struct hsc_func_spec hsc_func_spec[] = {
 struct hsc_range_config {
 	char name[HSC_PRESSURE_TRIPLET_LEN];
 	s32 pmin;
-	s32 pmax;
+	u32 pmax;
 };
 
 /* all min max limits have been converted to pascals */
@@ -152,11 +152,11 @@ static const struct hsc_range_config hsc_range_config[] = {
 	{.name = "400KG", .pmin =       0, .pmax =  400000 },
 	{.name = "600KG", .pmin =       0, .pmax =  600000 },
 	{.name = "001GG", .pmin =       0, .pmax = 1000000 },
-	{.name = "015PA", .pmin =       0, .pmax =  103425 },
-	{.name = "030PA", .pmin =       0, .pmax =  206850 },
-	{.name = "060PA", .pmin =       0, .pmax =  413700 },
-	{.name = "100PA", .pmin =       0, .pmax =  689500 },
-	{.name = "150PA", .pmin =       0, .pmax = 1034250 },
+	{.name = "015PA", .pmin =       0, .pmax =  103421 },
+	{.name = "030PA", .pmin =       0, .pmax =  206843 },
+	{.name = "060PA", .pmin =       0, .pmax =  413685 },
+	{.name = "100PA", .pmin =       0, .pmax =  689476 },
+	{.name = "150PA", .pmin =       0, .pmax = 1034214 },
 	{.name = "0.5ND", .pmin =    -125, .pmax =     125 },
 	{.name = "001ND", .pmin =    -249, .pmax =     249 },
 	{.name = "002ND", .pmin =    -498, .pmax =     498 },
@@ -166,10 +166,10 @@ static const struct hsc_range_config hsc_range_config[] = {
 	{.name = "020ND", .pmin =   -4982, .pmax =    4982 },
 	{.name = "030ND", .pmin =   -7473, .pmax =    7473 },
 	{.name = "001PD", .pmin =   -6895, .pmax =    6895 },
-	{.name = "005PD", .pmin =  -34475, .pmax =   34475 },
-	{.name = "015PD", .pmin = -103425, .pmax =  103425 },
-	{.name = "030PD", .pmin = -206850, .pmax =  206850 },
-	{.name = "060PD", .pmin = -413700, .pmax =  413700 },
+	{.name = "005PD", .pmin =  -34474, .pmax =   34474 },
+	{.name = "015PD", .pmin = -103421, .pmax =  103421 },
+	{.name = "030PD", .pmin = -206843, .pmax =  206843 },
+	{.name = "060PD", .pmin = -413685, .pmax =  413685 },
 	{.name = "001NG", .pmin =       0, .pmax =     249 },
 	{.name = "002NG", .pmin =       0, .pmax =     498 },
 	{.name = "004NG", .pmin =       0, .pmax =     996 },
@@ -178,12 +178,12 @@ static const struct hsc_range_config hsc_range_config[] = {
 	{.name = "020NG", .pmin =       0, .pmax =    4982 },
 	{.name = "030NG", .pmin =       0, .pmax =    7473 },
 	{.name = "001PG", .pmin =       0, .pmax =    6895 },
-	{.name = "005PG", .pmin =       0, .pmax =   34475 },
-	{.name = "015PG", .pmin =       0, .pmax =  103425 },
-	{.name = "030PG", .pmin =       0, .pmax =  206850 },
-	{.name = "060PG", .pmin =       0, .pmax =  413700 },
-	{.name = "100PG", .pmin =       0, .pmax =  689500 },
-	{.name = "150PG", .pmin =       0, .pmax = 1034250 }
+	{.name = "005PG", .pmin =       0, .pmax =   34474 },
+	{.name = "015PG", .pmin =       0, .pmax =  103421 },
+	{.name = "030PG", .pmin =       0, .pmax =  206843 },
+	{.name = "060PG", .pmin =       0, .pmax =  413685 },
+	{.name = "100PG", .pmin =       0, .pmax =  689476 },
+	{.name = "150PG", .pmin =       0, .pmax = 1034214 }
 };
 
 /*
@@ -282,7 +282,7 @@ static int hsc_read_raw(struct iio_dev *indio_dev,
 			return IIO_VAL_INT_PLUS_MICRO;
 		case IIO_PRESSURE:
 			*val = data->p_scale;
-			*val2 = data->p_scale_nano;
+			*val2 = data->p_scale_dec;
 			return IIO_VAL_INT_PLUS_NANO;
 		default:
 			return -EINVAL;
@@ -296,8 +296,8 @@ static int hsc_read_raw(struct iio_dev *indio_dev,
 			return IIO_VAL_FRACTIONAL;
 		case IIO_PRESSURE:
 			*val = data->p_offset;
-			*val2 = data->p_offset_nano;
-			return IIO_VAL_INT_PLUS_NANO;
+			*val2 = data->p_offset_dec;
+			return IIO_VAL_INT_PLUS_MICRO;
 		default:
 			return -EINVAL;
 		}
@@ -389,6 +389,10 @@ int hsc_probe(struct iio_dev *indio_dev, struct device *dev,
 				"honeywell,pressure-triplet is invalid\n");
 	}
 
+	ret = devm_regulator_get_enable(dev, "vdd");
+	if (ret)
+		return dev_err_probe(dev, ret, "can't get vdd supply\n");
+
 	hsc->outmin = hsc_func_spec[hsc->function].output_min;
 	hsc->outmax = hsc_func_spec[hsc->function].output_max;
 
@@ -396,16 +400,11 @@ int hsc_probe(struct iio_dev *indio_dev, struct device *dev,
 	   to be in Pa * 1000 as per IIO ABI requirement */
 	tmp = div_s64(((s64)(hsc->pmax - hsc->pmin)) * MICRO,
 		      (hsc->outmax - hsc->outmin));
-	hsc->p_scale = div_s64_rem(tmp, NANO, &hsc->p_scale_nano);
-	tmp =
-	    div_s64(((s64)hsc->pmin * (s64)(hsc->outmax - hsc->outmin)) *
-		    MICRO, hsc->pmax - hsc->pmin);
-	hsc->p_offset =
-	    div_s64_rem(tmp, NANO, &hsc->p_offset_nano) - hsc->outmin;
-
-	ret = devm_regulator_get_enable_optional(dev, "vdd");
-	if (ret != -ENODEV)
-		return ret;
+	hsc->p_scale = div_s64_rem(tmp, NANO, &hsc->p_scale_dec);
+	tmp = div_s64(((s64)hsc->pmin * (s64)(hsc->outmax - hsc->outmin)) *
+		      MICRO, hsc->pmax - hsc->pmin);
+	tmp -= (s64)hsc->outmin * MICRO;
+	hsc->p_offset = div_s64_rem(tmp, MICRO, &hsc->p_offset_dec);
 
 	mutex_init(&hsc->lock);
 	indio_dev->name = name;

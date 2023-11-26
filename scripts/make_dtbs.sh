@@ -13,16 +13,16 @@ create_devboard_dtb()
 
 create_dtbo()
 {
-    rm -f "${BUILD_DIR}/*.dtbo"
-    dtc -@ -I dts -O dtb -o "${BUILD_DIR}/bb-i2c2-hsc-00A0.dtbo" bb-i2c2-hsc-00A0.dts
-    cpp -nostdinc -I include -I ${LINUX_SRC}/include/ -I arch -undef -x assembler-with-cpp bb-spi0-hsc-00A0.dts "${BUILD_DIR}/bb-spi0-hsc-00A0.dts.preprocessed"
-    dtc -@ -I dts -O dtb -o "${BUILD_DIR}/bb-spi0-hsc-00A0.dtbo" "${BUILD_DIR}/bb-spi0-hsc-00A0.dts.preprocessed"
-    rm -f "${BUILD_DIR}/bb-spi0-hsc-00A0.dts.preprocessed"
+    file=$1
+    rm -f "${BUILD_DIR}/${file}.dtbo"
+    cpp -nostdinc -I include -I ${LINUX_SRC}/include/ -I arch -undef -x assembler-with-cpp ${file}.dts "${BUILD_DIR}/${file}.dts.preprocessed"
+    dtc -@ -I dts -O dtb -o "${BUILD_DIR}/${file}.dtbo" "${BUILD_DIR}/${file}.dts.preprocessed"
+    rm -f "${BUILD_DIR}/${file}.dts.preprocessed"
 }
 
-pushd "${LINUX_SRC}/arch/arm/boot/dts/ti/omap/"
+pushd "${LINUX_SRC}/arch/arm/boot/dts/ti/omap/" > /dev/null
 create_devboard_dtb 2>/dev/null
-popd
+popd > /dev/null
 
-create_dtbo
-
+create_dtbo bb-spi0-hsc-00A0
+create_dtbo bb-i2c2-hsc-00A0

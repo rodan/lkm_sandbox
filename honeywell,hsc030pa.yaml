@@ -4,7 +4,7 @@
 $id: http://devicetree.org/schemas/iio/pressure/honeywell,hsc030pa.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: Honeywell TruStability HSC and SSC pressure sensor families
+title: Honeywell TruStability HSC and SSC pressure sensor series
 
 description: |
   support for Honeywell TruStability HSC and SSC digital pressure sensor
@@ -56,9 +56,9 @@ properties:
 
   honeywell,pressure-triplet:
     description: |
-      Five character string that defines "pressure range, unit and type"
-      as part of the device nomenclature. In the unlikely case of a custom
-      chip, set to "NA" and provide honeywell,pmin-pascal honeywell,pmax-pascal
+      Case-sensitive five character string that defines pressure range, unit
+      and type as part of the device nomenclature. In the unlikely case of a
+      custom chip, set to "NA" and provide pmin-pascal and pmax-pascal.
     enum: [001BA, 1.6BA, 2.5BA, 004BA, 006BA, 010BA, 1.6MD, 2.5MD, 004MD,
            006MD, 010MD, 016MD, 025MD, 040MD, 060MD, 100MD, 160MD, 250MD,
            400MD, 600MD, 001BD, 1.6BD, 2.5BD, 004BD, 2.5MG, 004MG, 006MG,
@@ -85,7 +85,7 @@ properties:
     description: |
       Maximum pressure value the sensor can measure in pascal.
       To be specified only if honeywell,pressure-triplet is set to "NA".
-    $ref: /schemas/types.yaml#/definitions/int32
+    $ref: /schemas/types.yaml#/definitions/uint32
 
   vdd-supply:
     description:
@@ -126,8 +126,8 @@ examples:
             spi-max-frequency = <800000>;
             honeywell,transfer-function = <0>;
             honeywell,pressure-triplet = "NA";
-            honeywell,pmin-pascal = <0>;
-            honeywell,pmax-pascal = <206850>;
+            honeywell,pmin-pascal = <(-4000000)>;
+            honeywell,pmax-pascal = <200000>;
         };
     };
 ...

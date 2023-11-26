@@ -39,7 +39,7 @@ EOF
                 mult=100000
                 ;;
             psi)
-                mult=6895
+                mult=6894.75729
                 ;;
             inH2O)
                 mult=249.0889

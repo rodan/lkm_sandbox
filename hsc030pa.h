@@ -38,9 +38,9 @@ struct hsc_chip_data;
  * @outmax: maximum raw pressure in counts (based on transfer function)
  * @function: transfer function
  * @p_scale: pressure scale
- * @p_scale_nano: pressure scale, decimal places
+ * @p_scale_dec: pressure scale, decimal places
  * @p_offset: pressure offset
- * @p_offset_nano: pressure offset, decimal places
+ * @p_offset_dec: pressure offset, decimal places
  */
 struct hsc_data {
 	void *client;
@@ -56,9 +56,9 @@ struct hsc_data {
 	u32 outmax;
 	u32 function;
 	s64 p_scale;
-	s32 p_scale_nano;
+	s32 p_scale_dec;
 	s64 p_offset;
-	s32 p_offset_nano;
+	s32 p_offset_dec;
 };
 
 struct hsc_chip_data {
