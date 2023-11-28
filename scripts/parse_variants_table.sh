@@ -7,9 +7,14 @@ input_file='ssc_variants.txt'
 create_c_file()
 {
     cat << EOF
-
+/**
+ * struct hsc_range_config - pressure ranges based on the nomenclature
+ * @triplet: 5-char string that defines the range, measurement unit and type
+ * @pmin: lowest pressure that can be measured
+ * @pmax: highest pressure that can be measured
+ */
 struct hsc_range_config {
-	char name[HSC_PRESSURE_TRIPLET_LEN];
+	char triplet[HSC_PRESSURE_TRIPLET_LEN];
 	s32 pmin;
 	u32 pmax;
 };
@@ -53,8 +58,8 @@ EOF
         max=$(printf "%.0f" "${max}")
 
         #echo "${name} ${id} ${min} ${max} ${unit}"
-        echo -e "\t{.name = \"${name}\", .pmin = ${min}, .pmax = ${max} },"
-    done | column -t -R 6,9 | sed 's| \.|.|g;s| = |=|g;s| }|}|;s|^|\t|'
+        echo -e "\t{ .triplet = \"${name}\", .pmin = ${min}, .pmax = ${max} },"
+    done | column -t -R 7,10 | sed 's| \.|.|g;s| = |=|g;s| }|}|;s|^|\t|'
     echo '};'
 }
 

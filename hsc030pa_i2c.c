@@ -15,7 +15,7 @@
 
 #include "hsc030pa.h"
 
-static int hsc_i2c_xfer(struct hsc_data *data)
+static int hsc_i2c_recv(struct hsc_data *data)
 {
 	struct i2c_client *client = data->client;
 	struct i2c_msg msg;
@@ -24,7 +24,7 @@ static int hsc_i2c_xfer(struct hsc_data *data)
 	msg.addr = client->addr;
 	msg.flags = client->flags | I2C_M_RD;
 	msg.len = HSC_REG_MEASUREMENT_RD_SIZE;
-	msg.buf = (char *)&data->buffer;
+	msg.buf = data->buffer;
 
 	ret = i2c_transfer(client->adapter, &msg, 1);
 
@@ -33,24 +33,12 @@ static int hsc_i2c_xfer(struct hsc_data *data)
 
 static int hsc_i2c_probe(struct i2c_client *client)
 {
-	struct device *dev = &client->dev;
-	struct iio_dev *indio_dev;
-	struct hsc_data *hsc;
 	const struct i2c_device_id *id = i2c_client_get_device_id(client);
-
-	indio_dev = devm_iio_device_alloc(dev, sizeof(*hsc));
-	if (!indio_dev)
-		return -ENOMEM;
-
-	hsc = iio_priv(indio_dev);
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
 		return -EOPNOTSUPP;
 
-	hsc->xfer = hsc_i2c_xfer;
-	hsc->client = client;
-
-	return hsc_probe(indio_dev, &client->dev, id->name, id->driver_data);
+	return hsc_common_probe(&client->dev, client, hsc_i2c_recv, id->name);
 }
 
 static const struct of_device_id hsc_i2c_match[] = {

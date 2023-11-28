@@ -11,11 +11,11 @@
 #include <linux/property.h>
 #include <linux/types.h>
 
-/**
+/*
  * get all conversions (4 bytes) in one go
  * since transfers are not address-based
 */
-#define  HSC_REG_MEASUREMENT_RD_SIZE  4
+#define HSC_REG_MEASUREMENT_RD_SIZE 4
 
 struct device;
 
@@ -27,8 +27,9 @@ struct hsc_chip_data;
 /**
  * struct hsc_data
  * @client: either i2c or spi kernel interface struct for current dev
+ * @chip: structure containing chip's channel properties
  * @lock: lock protecting chip reads
- * @xfer: function that implements the chip reads
+ * @recv: function that implements the chip reads
  * @is_valid: false if last transfer has failed
  * @buffer: raw conversion data
  * @pmin: minimum measurable pressure limit
@@ -45,9 +46,9 @@ struct hsc_data {
 	void *client;
 	const struct hsc_chip_data *chip;
 	struct mutex lock;
-	int (*xfer)(struct hsc_data *data);
+	int (*recv)(struct hsc_data *data);
 	bool is_valid;
-	u8 buffer[HSC_REG_MEASUREMENT_RD_SIZE];
+	u8 buffer[HSC_REG_MEASUREMENT_RD_SIZE] __aligned(IIO_DMA_MINALIGN);
 	s32 pmin;
 	s32 pmax;
 	u32 outmin;
@@ -72,7 +73,7 @@ enum hsc_func_id {
 	HSC_FUNCTION_F,
 };
 
-int hsc_probe(struct iio_dev *indio_dev, struct device *dev,
-	      const char *name, int type);
+int hsc_common_probe(struct device *dev, void *client,
+	    int (*recv_fct)(struct hsc_data *data), const char *name);
 
 #endif

@@ -14,11 +14,11 @@
 
 #include "hsc030pa.h"
 
-static int hsc_spi_xfer(struct hsc_data *data)
+static int hsc_spi_recv(struct hsc_data *data)
 {
 	struct spi_transfer xfer = {
 		.tx_buf = NULL,
-		.rx_buf = (char *)&data->buffer,
+		.rx_buf = data->buffer,
 		.len = HSC_REG_MEASUREMENT_RD_SIZE,
 	};
 
@@ -27,24 +27,13 @@ static int hsc_spi_xfer(struct hsc_data *data)
 
 static int hsc_spi_probe(struct spi_device *spi)
 {
-	struct iio_dev *indio_dev;
-	struct hsc_data *hsc;
-	struct device *dev = &spi->dev;
+	const struct spi_device_id *id = spi_get_device_id(spi);
 
-	indio_dev = devm_iio_device_alloc(dev, sizeof(*hsc));
-	if (!indio_dev)
-		return -ENOMEM;
-
-	hsc = iio_priv(indio_dev);
-	hsc->xfer = hsc_spi_xfer;
-	hsc->client = spi;
-
-	return hsc_probe(indio_dev, &spi->dev, spi_get_device_id(spi)->name,
-			 spi_get_device_id(spi)->driver_data);
+	return hsc_common_probe(&spi->dev, spi, hsc_spi_recv, id->name);
 }
 
 static const struct of_device_id hsc_spi_match[] = {
-	{.compatible = "honeywell,hsc030pa",},
+	{.compatible = "honeywell,hsc030pa"},
 	{}
 };
 MODULE_DEVICE_TABLE(of, hsc_spi_match);
