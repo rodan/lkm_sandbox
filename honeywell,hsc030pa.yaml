@@ -80,13 +80,11 @@ properties:
     description: |
       Minimum pressure value the sensor can measure in pascal.
       To be specified only if honeywell,pressure-triplet is set to "NA".
-    $ref: /schemas/types.yaml#/definitions/int32
 
   honeywell,pmax-pascal:
     description: |
       Maximum pressure value the sensor can measure in pascal.
       To be specified only if honeywell,pressure-triplet is set to "NA".
-    $ref: /schemas/types.yaml#/definitions/uint32
 
   vdd-supply:
     description:
@@ -102,6 +100,16 @@ required:
   - honeywell,pressure-triplet
 
 additionalProperties: false
+
+dependentSchemas:
+  honeywell,pmin-pascal:
+    properties:
+      honeywell,pressure-triplet:
+        const: NA
+  honeywell,pmax-pascal:
+    properties:
+      honeywell,pressure-triplet:
+        const: NA
 
 examples:
   - |

@@ -15,7 +15,6 @@
 #include <linux/math64.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
-#include <linux/mutex.h>
 #include <linux/printk.h>
 #include <linux/regulator/consumer.h>
 #include <linux/string.h>
@@ -213,7 +212,7 @@ static int hsc_get_measurement(struct hsc_data *data)
 	int ret;
 
 	guard(mutex)(&data->lock);
-	ret = data->recv(data);
+	ret = data->recv_cb(data);
 	if (ret < 0)
 		return ret;
 
@@ -305,8 +304,6 @@ static int hsc_read_raw(struct iio_dev *indio_dev,
 	default:
 		return -EINVAL;
 	}
-
-	return -EINVAL;
 }
 
 static const struct iio_chan_spec hsc_channels[] = {
@@ -334,8 +331,8 @@ static const struct hsc_chip_data hsc_chip = {
 	.num_channels = ARRAY_SIZE(hsc_channels),
 };
 
-int hsc_common_probe(struct device *dev, void *client,
-	    int (*recv_fct)(struct hsc_data *data), const char *name)
+int hsc_common_probe(struct device *dev, void *client, hsc_recv_fn recv_fn,
+			const char *name)
 {
 	struct hsc_data *hsc;
 	struct iio_dev *indio_dev;
@@ -352,47 +349,41 @@ int hsc_common_probe(struct device *dev, void *client,
 	hsc = iio_priv(indio_dev);
 
 	hsc->chip = &hsc_chip;
-	hsc->recv = recv_fct;
+	hsc->recv_cb = recv_fn;
 	hsc->client = client;
 
-	ret = device_property_read_u32(dev,
-				       "honeywell,transfer-function",
-				       &hsc->function);
+	ret = device_property_read_u32(dev, "honeywell,transfer-function",
+				     &hsc->function);
 	if (ret)
 		return dev_err_probe(dev, ret,
-			    "honeywell,transfer-function could not be read\n");
+			"honeywell,transfer-function could not be read\n");
 	if (hsc->function > HSC_FUNCTION_F)
 		return dev_err_probe(dev, -EINVAL,
 				     "honeywell,transfer-function %d invalid\n",
 				     hsc->function);
 
-	ret = device_property_read_string(dev,
-		"honeywell,pressure-triplet", &triplet);
+	ret = device_property_read_string(dev, "honeywell,pressure-triplet",
+					&triplet);
 	if (ret)
 		return dev_err_probe(dev, ret,
 			"honeywell,pressure-triplet could not be read\n");
 
 	if (strncmp(triplet, "NA", 2) == 0) {
-		/* "not available" in the nomenclature
-		   we got a custom-range chip so extract pmin, pmax from dt */
-		ret = device_property_read_u32(dev,
-					       "honeywell,pmin-pascal",
+		ret = device_property_read_u32(dev, "honeywell,pmin-pascal",
 					       &hsc->pmin);
 		if (ret)
 			return dev_err_probe(dev, ret,
 				"honeywell,pmin-pascal could not be read\n");
-		ret = device_property_read_u32(dev,
-					       "honeywell,pmax-pascal",
+		ret = device_property_read_u32(dev, "honeywell,pmax-pascal",
 					       &hsc->pmax);
 		if (ret)
 			return dev_err_probe(dev, ret,
 				"honeywell,pmax-pascal could not be read\n");
 	} else {
-		/* chip should be defined in the nomenclature */
 		for (index = 0; index < ARRAY_SIZE(hsc_range_config); index++) {
 			if (strncmp(hsc_range_config[index].triplet,
-					triplet,
-					HSC_PRESSURE_TRIPLET_LEN - 1) == 0) {
+				    triplet,
+				    HSC_PRESSURE_TRIPLET_LEN - 1) == 0) {
 				hsc->pmin = hsc_range_config[index].pmin;
 				hsc->pmax = hsc_range_config[index].pmax;
 				found = 1;
@@ -411,10 +402,8 @@ int hsc_common_probe(struct device *dev, void *client,
 	hsc->outmin = hsc_func_spec[hsc->function].output_min;
 	hsc->outmax = hsc_func_spec[hsc->function].output_max;
 
-	/* multiply with MICRO and then divide by NANO since the output needs
-	   to be in Pa * 1000 as per IIO ABI requirement */
 	tmp = div_s64(((s64)(hsc->pmax - hsc->pmin)) * MICRO,
-		      (hsc->outmax - hsc->outmin));
+		      hsc->outmax - hsc->outmin);
 	hsc->p_scale = div_s64_rem(tmp, NANO, &hsc->p_scale_dec);
 	tmp = div_s64(((s64)hsc->pmin * (s64)(hsc->outmax - hsc->outmin)) *
 		      MICRO, hsc->pmax - hsc->pmin);

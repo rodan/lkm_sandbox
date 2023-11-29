@@ -8,6 +8,7 @@
 #ifndef _HSC030PA_H
 #define _HSC030PA_H
 
+#include <linux/mutex.h>
 #include <linux/property.h>
 #include <linux/types.h>
 
@@ -22,7 +23,10 @@ struct device;
 struct iio_chan_spec;
 struct iio_dev;
 
+struct hsc_data;
 struct hsc_chip_data;
+
+typedef int (*hsc_recv_fn)(struct hsc_data *);
 
 /**
  * struct hsc_data
@@ -46,7 +50,7 @@ struct hsc_data {
 	void *client;
 	const struct hsc_chip_data *chip;
 	struct mutex lock;
-	int (*recv)(struct hsc_data *data);
+	hsc_recv_fn recv_cb;
 	bool is_valid;
 	u8 buffer[HSC_REG_MEASUREMENT_RD_SIZE] __aligned(IIO_DMA_MINALIGN);
 	s32 pmin;
@@ -74,6 +78,6 @@ enum hsc_func_id {
 };
 
 int hsc_common_probe(struct device *dev, void *client,
-	    int (*recv_fct)(struct hsc_data *data), const char *name);
+	hsc_recv_fn recv_fn, const char *name);
 
 #endif

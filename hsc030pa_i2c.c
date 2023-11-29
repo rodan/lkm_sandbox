@@ -8,7 +8,9 @@
  * Datasheet: https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/siot/en-us/products/sensors/pressure-sensors/board-mount-pressure-sensors/common/documents/sps-siot-i2c-comms-digital-output-pressure-sensors-tn-008201-3-en-ciid-45841.pdf [i2c related]
  */
 
+#include <linux/errno.h>
 #include <linux/i2c.h>
+#include <linux/mod_devicetable.h>
 #include <linux/module.h>
 
 #include <linux/iio/iio.h>
@@ -57,7 +59,7 @@ static struct i2c_driver hsc_i2c_driver = {
 	.driver = {
 		.name = "hsc030pa",
 		.of_match_table = hsc_i2c_match,
-		},
+	},
 	.probe = hsc_i2c_probe,
 	.id_table = hsc_i2c_id,
 };
