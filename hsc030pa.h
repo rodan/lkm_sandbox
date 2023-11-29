@@ -9,13 +9,8 @@
 #define _HSC030PA_H
 
 #include <linux/mutex.h>
-#include <linux/property.h>
 #include <linux/types.h>
 
-/*
- * get all conversions (4 bytes) in one go
- * since transfers are not address-based
-*/
 #define HSC_REG_MEASUREMENT_RD_SIZE 4
 
 struct device;
@@ -78,6 +73,6 @@ enum hsc_func_id {
 };
 
 int hsc_common_probe(struct device *dev, void *client,
-	hsc_recv_fn recv_fn, const char *name);
+	hsc_recv_fn recv, const char *name);
 
 #endif

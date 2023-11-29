@@ -16,6 +16,7 @@
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
 #include <linux/printk.h>
+#include <linux/property.h>
 #include <linux/regulator/consumer.h>
 #include <linux/string.h>
 #include <linux/types.h>
@@ -56,138 +57,212 @@ static const struct hsc_func_spec hsc_func_spec[] = {
 	[HSC_FUNCTION_F] = { .output_min =  655, .output_max = 15401 },
 };
 
+enum hsc_variants {
+	HSC001BA = 0x0, HSC1_6BA = 0x1, HSC2_5BA = 0x2, HSC004BA = 0x3,
+	HSC006BA = 0x4, HSC010BA = 0x5, HSC1_6MD = 0x6, HSC2_5MD = 0x7,
+	HSC004MD = 0x8, HSC006MD = 0x9, HSC010MD = 0xa, HSC016MD = 0xb,
+	HSC025MD = 0xc, HSC040MD = 0xd, HSC060MD = 0xe, HSC100MD = 0xf,
+	HSC160MD = 0x10, HSC250MD = 0x11, HSC400MD = 0x12, HSC600MD = 0x13,
+	HSC001BD = 0x14, HSC1_6BD = 0x15, HSC2_5BD = 0x16, HSC004BD = 0x17,
+	HSC2_5MG = 0x18, HSC004MG = 0x19, HSC006MG = 0x1a, HSC010MG = 0x1b,
+	HSC016MG = 0x1c, HSC025MG = 0x1d, HSC040MG = 0x1e, HSC060MG = 0x1f,
+	HSC100MG = 0x20, HSC160MG = 0x21, HSC250MG = 0x22, HSC400MG = 0x23,
+	HSC600MG = 0x24, HSC001BG = 0x25, HSC1_6BG = 0x26, HSC2_5BG = 0x27,
+	HSC004BG = 0x28, HSC006BG = 0x29, HSC010BG = 0x2a, HSC100KA = 0x2b,
+	HSC160KA = 0x2c, HSC250KA = 0x2d, HSC400KA = 0x2e, HSC600KA = 0x2f,
+	HSC001GA = 0x30, HSC160LD = 0x31, HSC250LD = 0x32, HSC400LD = 0x33,
+	HSC600LD = 0x34, HSC001KD = 0x35, HSC1_6KD = 0x36, HSC2_5KD = 0x37,
+	HSC004KD = 0x38, HSC006KD = 0x39, HSC010KD = 0x3a, HSC016KD = 0x3b,
+	HSC025KD = 0x3c, HSC040KD = 0x3d, HSC060KD = 0x3e, HSC100KD = 0x3f,
+	HSC160KD = 0x40, HSC250KD = 0x41, HSC400KD = 0x42, HSC250LG = 0x43,
+	HSC400LG = 0x44, HSC600LG = 0x45, HSC001KG = 0x46, HSC1_6KG = 0x47,
+	HSC2_5KG = 0x48, HSC004KG = 0x49, HSC006KG = 0x4a, HSC010KG = 0x4b,
+	HSC016KG = 0x4c, HSC025KG = 0x4d, HSC040KG = 0x4e, HSC060KG = 0x4f,
+	HSC100KG = 0x50, HSC160KG = 0x51, HSC250KG = 0x52, HSC400KG = 0x53,
+	HSC600KG = 0x54, HSC001GG = 0x55, HSC015PA = 0x56, HSC030PA = 0x57,
+	HSC060PA = 0x58, HSC100PA = 0x59, HSC150PA = 0x5a, HSC0_5ND = 0x5b,
+	HSC001ND = 0x5c, HSC002ND = 0x5d, HSC004ND = 0x5e, HSC005ND = 0x5f,
+	HSC010ND = 0x60, HSC020ND = 0x61, HSC030ND = 0x62, HSC001PD = 0x63,
+	HSC005PD = 0x64, HSC015PD = 0x65, HSC030PD = 0x66, HSC060PD = 0x67,
+	HSC001NG = 0x68, HSC002NG = 0x69, HSC004NG = 0x6a, HSC005NG = 0x6b,
+	HSC010NG = 0x6c, HSC020NG = 0x6d, HSC030NG = 0x6e, HSC001PG = 0x6f,
+	HSC005PG = 0x70, HSC015PG = 0x71, HSC030PG = 0x72, HSC060PG = 0x73,
+	HSC100PG = 0x74, HSC150PG = 0x75, HSC_VARIANTS_MAX
+};
+
+static const char * const hsc_triplet_variants[HSC_VARIANTS_MAX] = {
+	[HSC001BA] = "001BA", [HSC1_6BA] = "1.6BA", [HSC2_5BA] = "2.5BA",
+	[HSC004BA] = "004BA", [HSC006BA] = "006BA", [HSC010BA] = "010BA",
+	[HSC1_6MD] = "1.6MD", [HSC2_5MD] = "2.5MD", [HSC004MD] = "004MD",
+	[HSC006MD] = "006MD", [HSC010MD] = "010MD", [HSC016MD] = "016MD",
+	[HSC025MD] = "025MD", [HSC040MD] = "040MD", [HSC060MD] = "060MD",
+	[HSC100MD] = "100MD", [HSC160MD] = "160MD", [HSC250MD] = "250MD",
+	[HSC400MD] = "400MD", [HSC600MD] = "600MD", [HSC001BD] = "001BD",
+	[HSC1_6BD] = "1.6BD", [HSC2_5BD] = "2.5BD", [HSC004BD] = "004BD",
+	[HSC2_5MG] = "2.5MG", [HSC004MG] = "004MG", [HSC006MG] = "006MG",
+	[HSC010MG] = "010MG", [HSC016MG] = "016MG", [HSC025MG] = "025MG",
+	[HSC040MG] = "040MG", [HSC060MG] = "060MG", [HSC100MG] = "100MG",
+	[HSC160MG] = "160MG", [HSC250MG] = "250MG", [HSC400MG] = "400MG",
+	[HSC600MG] = "600MG", [HSC001BG] = "001BG", [HSC1_6BG] = "1.6BG",
+	[HSC2_5BG] = "2.5BG", [HSC004BG] = "004BG", [HSC006BG] = "006BG",
+	[HSC010BG] = "010BG", [HSC100KA] = "100KA", [HSC160KA] = "160KA",
+	[HSC250KA] = "250KA", [HSC400KA] = "400KA", [HSC600KA] = "600KA",
+	[HSC001GA] = "001GA", [HSC160LD] = "160LD", [HSC250LD] = "250LD",
+	[HSC400LD] = "400LD", [HSC600LD] = "600LD", [HSC001KD] = "001KD",
+	[HSC1_6KD] = "1.6KD", [HSC2_5KD] = "2.5KD", [HSC004KD] = "004KD",
+	[HSC006KD] = "006KD", [HSC010KD] = "010KD", [HSC016KD] = "016KD",
+	[HSC025KD] = "025KD", [HSC040KD] = "040KD", [HSC060KD] = "060KD",
+	[HSC100KD] = "100KD", [HSC160KD] = "160KD", [HSC250KD] = "250KD",
+	[HSC400KD] = "400KD", [HSC250LG] = "250LG", [HSC400LG] = "400LG",
+	[HSC600LG] = "600LG", [HSC001KG] = "001KG", [HSC1_6KG] = "1.6KG",
+	[HSC2_5KG] = "2.5KG", [HSC004KG] = "004KG", [HSC006KG] = "006KG",
+	[HSC010KG] = "010KG", [HSC016KG] = "016KG", [HSC025KG] = "025KG",
+	[HSC040KG] = "040KG", [HSC060KG] = "060KG", [HSC100KG] = "100KG",
+	[HSC160KG] = "160KG", [HSC250KG] = "250KG", [HSC400KG] = "400KG",
+	[HSC600KG] = "600KG", [HSC001GG] = "001GG", [HSC015PA] = "015PA",
+	[HSC030PA] = "030PA", [HSC060PA] = "060PA", [HSC100PA] = "100PA",
+	[HSC150PA] = "150PA", [HSC0_5ND] = "0.5ND", [HSC001ND] = "001ND",
+	[HSC002ND] = "002ND", [HSC004ND] = "004ND", [HSC005ND] = "005ND",
+	[HSC010ND] = "010ND", [HSC020ND] = "020ND", [HSC030ND] = "030ND",
+	[HSC001PD] = "001PD", [HSC005PD] = "005PD", [HSC015PD] = "015PD",
+	[HSC030PD] = "030PD", [HSC060PD] = "060PD", [HSC001NG] = "001NG",
+	[HSC002NG] = "002NG", [HSC004NG] = "004NG", [HSC005NG] = "005NG",
+	[HSC010NG] = "010NG", [HSC020NG] = "020NG", [HSC030NG] = "030NG",
+	[HSC001PG] = "001PG", [HSC005PG] = "005PG", [HSC015PG] = "015PG",
+	[HSC030PG] = "030PG", [HSC060PG] = "060PG", [HSC100PG] = "100PG",
+	[HSC150PG] = "150PG",
+};
+
 /**
  * struct hsc_range_config - list of pressure ranges based on nomenclature
- * @triplet: string that defines the range, measurement unit and type
  * @pmin: lowest pressure that can be measured
  * @pmax: highest pressure that can be measured
  */
 struct hsc_range_config {
-	char triplet[HSC_PRESSURE_TRIPLET_LEN];
-	s32 pmin;
-	u32 pmax;
+	const s32 pmin;
+	const s32 pmax;
 };
 
-/* all min max limits have been converted to pascals */
-static const struct hsc_range_config hsc_range_config[] = {
-	{ .triplet = "001BA", .pmin =       0, .pmax =  100000 },
-	{ .triplet = "1.6BA", .pmin =       0, .pmax =  160000 },
-	{ .triplet = "2.5BA", .pmin =       0, .pmax =  250000 },
-	{ .triplet = "004BA", .pmin =       0, .pmax =  400000 },
-	{ .triplet = "006BA", .pmin =       0, .pmax =  600000 },
-	{ .triplet = "010BA", .pmin =       0, .pmax = 1000000 },
-	{ .triplet = "1.6MD", .pmin =    -160, .pmax =     160 },
-	{ .triplet = "2.5MD", .pmin =    -250, .pmax =     250 },
-	{ .triplet = "004MD", .pmin =    -400, .pmax =     400 },
-	{ .triplet = "006MD", .pmin =    -600, .pmax =     600 },
-	{ .triplet = "010MD", .pmin =   -1000, .pmax =    1000 },
-	{ .triplet = "016MD", .pmin =   -1600, .pmax =    1600 },
-	{ .triplet = "025MD", .pmin =   -2500, .pmax =    2500 },
-	{ .triplet = "040MD", .pmin =   -4000, .pmax =    4000 },
-	{ .triplet = "060MD", .pmin =   -6000, .pmax =    6000 },
-	{ .triplet = "100MD", .pmin =  -10000, .pmax =   10000 },
-	{ .triplet = "160MD", .pmin =  -16000, .pmax =   16000 },
-	{ .triplet = "250MD", .pmin =  -25000, .pmax =   25000 },
-	{ .triplet = "400MD", .pmin =  -40000, .pmax =   40000 },
-	{ .triplet = "600MD", .pmin =  -60000, .pmax =   60000 },
-	{ .triplet = "001BD", .pmin = -100000, .pmax =  100000 },
-	{ .triplet = "1.6BD", .pmin = -160000, .pmax =  160000 },
-	{ .triplet = "2.5BD", .pmin = -250000, .pmax =  250000 },
-	{ .triplet = "004BD", .pmin = -400000, .pmax =  400000 },
-	{ .triplet = "2.5MG", .pmin =       0, .pmax =     250 },
-	{ .triplet = "004MG", .pmin =       0, .pmax =     400 },
-	{ .triplet = "006MG", .pmin =       0, .pmax =     600 },
-	{ .triplet = "010MG", .pmin =       0, .pmax =    1000 },
-	{ .triplet = "016MG", .pmin =       0, .pmax =    1600 },
-	{ .triplet = "025MG", .pmin =       0, .pmax =    2500 },
-	{ .triplet = "040MG", .pmin =       0, .pmax =    4000 },
-	{ .triplet = "060MG", .pmin =       0, .pmax =    6000 },
-	{ .triplet = "100MG", .pmin =       0, .pmax =   10000 },
-	{ .triplet = "160MG", .pmin =       0, .pmax =   16000 },
-	{ .triplet = "250MG", .pmin =       0, .pmax =   25000 },
-	{ .triplet = "400MG", .pmin =       0, .pmax =   40000 },
-	{ .triplet = "600MG", .pmin =       0, .pmax =   60000 },
-	{ .triplet = "001BG", .pmin =       0, .pmax =  100000 },
-	{ .triplet = "1.6BG", .pmin =       0, .pmax =  160000 },
-	{ .triplet = "2.5BG", .pmin =       0, .pmax =  250000 },
-	{ .triplet = "004BG", .pmin =       0, .pmax =  400000 },
-	{ .triplet = "006BG", .pmin =       0, .pmax =  600000 },
-	{ .triplet = "010BG", .pmin =       0, .pmax = 1000000 },
-	{ .triplet = "100KA", .pmin =       0, .pmax =  100000 },
-	{ .triplet = "160KA", .pmin =       0, .pmax =  160000 },
-	{ .triplet = "250KA", .pmin =       0, .pmax =  250000 },
-	{ .triplet = "400KA", .pmin =       0, .pmax =  400000 },
-	{ .triplet = "600KA", .pmin =       0, .pmax =  600000 },
-	{ .triplet = "001GA", .pmin =       0, .pmax = 1000000 },
-	{ .triplet = "160LD", .pmin =    -160, .pmax =     160 },
-	{ .triplet = "250LD", .pmin =    -250, .pmax =     250 },
-	{ .triplet = "400LD", .pmin =    -400, .pmax =     400 },
-	{ .triplet = "600LD", .pmin =    -600, .pmax =     600 },
-	{ .triplet = "001KD", .pmin =   -1000, .pmax =    1000 },
-	{ .triplet = "1.6KD", .pmin =   -1600, .pmax =    1600 },
-	{ .triplet = "2.5KD", .pmin =   -2500, .pmax =    2500 },
-	{ .triplet = "004KD", .pmin =   -4000, .pmax =    4000 },
-	{ .triplet = "006KD", .pmin =   -6000, .pmax =    6000 },
-	{ .triplet = "010KD", .pmin =  -10000, .pmax =   10000 },
-	{ .triplet = "016KD", .pmin =  -16000, .pmax =   16000 },
-	{ .triplet = "025KD", .pmin =  -25000, .pmax =   25000 },
-	{ .triplet = "040KD", .pmin =  -40000, .pmax =   40000 },
-	{ .triplet = "060KD", .pmin =  -60000, .pmax =   60000 },
-	{ .triplet = "100KD", .pmin = -100000, .pmax =  100000 },
-	{ .triplet = "160KD", .pmin = -160000, .pmax =  160000 },
-	{ .triplet = "250KD", .pmin = -250000, .pmax =  250000 },
-	{ .triplet = "400KD", .pmin = -400000, .pmax =  400000 },
-	{ .triplet = "250LG", .pmin =       0, .pmax =     250 },
-	{ .triplet = "400LG", .pmin =       0, .pmax =     400 },
-	{ .triplet = "600LG", .pmin =       0, .pmax =     600 },
-	{ .triplet = "001KG", .pmin =       0, .pmax =    1000 },
-	{ .triplet = "1.6KG", .pmin =       0, .pmax =    1600 },
-	{ .triplet = "2.5KG", .pmin =       0, .pmax =    2500 },
-	{ .triplet = "004KG", .pmin =       0, .pmax =    4000 },
-	{ .triplet = "006KG", .pmin =       0, .pmax =    6000 },
-	{ .triplet = "010KG", .pmin =       0, .pmax =   10000 },
-	{ .triplet = "016KG", .pmin =       0, .pmax =   16000 },
-	{ .triplet = "025KG", .pmin =       0, .pmax =   25000 },
-	{ .triplet = "040KG", .pmin =       0, .pmax =   40000 },
-	{ .triplet = "060KG", .pmin =       0, .pmax =   60000 },
-	{ .triplet = "100KG", .pmin =       0, .pmax =  100000 },
-	{ .triplet = "160KG", .pmin =       0, .pmax =  160000 },
-	{ .triplet = "250KG", .pmin =       0, .pmax =  250000 },
-	{ .triplet = "400KG", .pmin =       0, .pmax =  400000 },
-	{ .triplet = "600KG", .pmin =       0, .pmax =  600000 },
-	{ .triplet = "001GG", .pmin =       0, .pmax = 1000000 },
-	{ .triplet = "015PA", .pmin =       0, .pmax =  103421 },
-	{ .triplet = "030PA", .pmin =       0, .pmax =  206843 },
-	{ .triplet = "060PA", .pmin =       0, .pmax =  413685 },
-	{ .triplet = "100PA", .pmin =       0, .pmax =  689476 },
-	{ .triplet = "150PA", .pmin =       0, .pmax = 1034214 },
-	{ .triplet = "0.5ND", .pmin =    -125, .pmax =     125 },
-	{ .triplet = "001ND", .pmin =    -249, .pmax =     249 },
-	{ .triplet = "002ND", .pmin =    -498, .pmax =     498 },
-	{ .triplet = "004ND", .pmin =    -996, .pmax =     996 },
-	{ .triplet = "005ND", .pmin =   -1245, .pmax =    1245 },
-	{ .triplet = "010ND", .pmin =   -2491, .pmax =    2491 },
-	{ .triplet = "020ND", .pmin =   -4982, .pmax =    4982 },
-	{ .triplet = "030ND", .pmin =   -7473, .pmax =    7473 },
-	{ .triplet = "001PD", .pmin =   -6895, .pmax =    6895 },
-	{ .triplet = "005PD", .pmin =  -34474, .pmax =   34474 },
-	{ .triplet = "015PD", .pmin = -103421, .pmax =  103421 },
-	{ .triplet = "030PD", .pmin = -206843, .pmax =  206843 },
-	{ .triplet = "060PD", .pmin = -413685, .pmax =  413685 },
-	{ .triplet = "001NG", .pmin =       0, .pmax =     249 },
-	{ .triplet = "002NG", .pmin =       0, .pmax =     498 },
-	{ .triplet = "004NG", .pmin =       0, .pmax =     996 },
-	{ .triplet = "005NG", .pmin =       0, .pmax =    1245 },
-	{ .triplet = "010NG", .pmin =       0, .pmax =    2491 },
-	{ .triplet = "020NG", .pmin =       0, .pmax =    4982 },
-	{ .triplet = "030NG", .pmin =       0, .pmax =    7473 },
-	{ .triplet = "001PG", .pmin =       0, .pmax =    6895 },
-	{ .triplet = "005PG", .pmin =       0, .pmax =   34474 },
-	{ .triplet = "015PG", .pmin =       0, .pmax =  103421 },
-	{ .triplet = "030PG", .pmin =       0, .pmax =  206843 },
-	{ .triplet = "060PG", .pmin =       0, .pmax =  413685 },
-	{ .triplet = "100PG", .pmin =       0, .pmax =  689476 },
-	{ .triplet = "150PG", .pmin =       0, .pmax = 1034214 },
+/* All min max limits have been converted to pascals */
+static const struct hsc_range_config hsc_range_config[HSC_VARIANTS_MAX] = {
+	[HSC001BA] = { .pmin =       0, .pmax =  100000 },
+	[HSC1_6BA] = { .pmin =       0, .pmax =  160000 },
+	[HSC2_5BA] = { .pmin =       0, .pmax =  250000 },
+	[HSC004BA] = { .pmin =       0, .pmax =  400000 },
+	[HSC006BA] = { .pmin =       0, .pmax =  600000 },
+	[HSC010BA] = { .pmin =       0, .pmax = 1000000 },
+	[HSC1_6MD] = { .pmin =    -160, .pmax =     160 },
+	[HSC2_5MD] = { .pmin =    -250, .pmax =     250 },
+	[HSC004MD] = { .pmin =    -400, .pmax =     400 },
+	[HSC006MD] = { .pmin =    -600, .pmax =     600 },
+	[HSC010MD] = { .pmin =   -1000, .pmax =    1000 },
+	[HSC016MD] = { .pmin =   -1600, .pmax =    1600 },
+	[HSC025MD] = { .pmin =   -2500, .pmax =    2500 },
+	[HSC040MD] = { .pmin =   -4000, .pmax =    4000 },
+	[HSC060MD] = { .pmin =   -6000, .pmax =    6000 },
+	[HSC100MD] = { .pmin =  -10000, .pmax =   10000 },
+	[HSC160MD] = { .pmin =  -16000, .pmax =   16000 },
+	[HSC250MD] = { .pmin =  -25000, .pmax =   25000 },
+	[HSC400MD] = { .pmin =  -40000, .pmax =   40000 },
+	[HSC600MD] = { .pmin =  -60000, .pmax =   60000 },
+	[HSC001BD] = { .pmin = -100000, .pmax =  100000 },
+	[HSC1_6BD] = { .pmin = -160000, .pmax =  160000 },
+	[HSC2_5BD] = { .pmin = -250000, .pmax =  250000 },
+	[HSC004BD] = { .pmin = -400000, .pmax =  400000 },
+	[HSC2_5MG] = { .pmin =       0, .pmax =     250 },
+	[HSC004MG] = { .pmin =       0, .pmax =     400 },
+	[HSC006MG] = { .pmin =       0, .pmax =     600 },
+	[HSC010MG] = { .pmin =       0, .pmax =    1000 },
+	[HSC016MG] = { .pmin =       0, .pmax =    1600 },
+	[HSC025MG] = { .pmin =       0, .pmax =    2500 },
+	[HSC040MG] = { .pmin =       0, .pmax =    4000 },
+	[HSC060MG] = { .pmin =       0, .pmax =    6000 },
+	[HSC100MG] = { .pmin =       0, .pmax =   10000 },
+	[HSC160MG] = { .pmin =       0, .pmax =   16000 },
+	[HSC250MG] = { .pmin =       0, .pmax =   25000 },
+	[HSC400MG] = { .pmin =       0, .pmax =   40000 },
+	[HSC600MG] = { .pmin =       0, .pmax =   60000 },
+	[HSC001BG] = { .pmin =       0, .pmax =  100000 },
+	[HSC1_6BG] = { .pmin =       0, .pmax =  160000 },
+	[HSC2_5BG] = { .pmin =       0, .pmax =  250000 },
+	[HSC004BG] = { .pmin =       0, .pmax =  400000 },
+	[HSC006BG] = { .pmin =       0, .pmax =  600000 },
+	[HSC010BG] = { .pmin =       0, .pmax = 1000000 },
+	[HSC100KA] = { .pmin =       0, .pmax =  100000 },
+	[HSC160KA] = { .pmin =       0, .pmax =  160000 },
+	[HSC250KA] = { .pmin =       0, .pmax =  250000 },
+	[HSC400KA] = { .pmin =       0, .pmax =  400000 },
+	[HSC600KA] = { .pmin =       0, .pmax =  600000 },
+	[HSC001GA] = { .pmin =       0, .pmax = 1000000 },
+	[HSC160LD] = { .pmin =    -160, .pmax =     160 },
+	[HSC250LD] = { .pmin =    -250, .pmax =     250 },
+	[HSC400LD] = { .pmin =    -400, .pmax =     400 },
+	[HSC600LD] = { .pmin =    -600, .pmax =     600 },
+	[HSC001KD] = { .pmin =   -1000, .pmax =    1000 },
+	[HSC1_6KD] = { .pmin =   -1600, .pmax =    1600 },
+	[HSC2_5KD] = { .pmin =   -2500, .pmax =    2500 },
+	[HSC004KD] = { .pmin =   -4000, .pmax =    4000 },
+	[HSC006KD] = { .pmin =   -6000, .pmax =    6000 },
+	[HSC010KD] = { .pmin =  -10000, .pmax =   10000 },
+	[HSC016KD] = { .pmin =  -16000, .pmax =   16000 },
+	[HSC025KD] = { .pmin =  -25000, .pmax =   25000 },
+	[HSC040KD] = { .pmin =  -40000, .pmax =   40000 },
+	[HSC060KD] = { .pmin =  -60000, .pmax =   60000 },
+	[HSC100KD] = { .pmin = -100000, .pmax =  100000 },
+	[HSC160KD] = { .pmin = -160000, .pmax =  160000 },
+	[HSC250KD] = { .pmin = -250000, .pmax =  250000 },
+	[HSC400KD] = { .pmin = -400000, .pmax =  400000 },
+	[HSC250LG] = { .pmin =       0, .pmax =     250 },
+	[HSC400LG] = { .pmin =       0, .pmax =     400 },
+	[HSC600LG] = { .pmin =       0, .pmax =     600 },
+	[HSC001KG] = { .pmin =       0, .pmax =    1000 },
+	[HSC1_6KG] = { .pmin =       0, .pmax =    1600 },
+	[HSC2_5KG] = { .pmin =       0, .pmax =    2500 },
+	[HSC004KG] = { .pmin =       0, .pmax =    4000 },
+	[HSC006KG] = { .pmin =       0, .pmax =    6000 },
+	[HSC010KG] = { .pmin =       0, .pmax =   10000 },
+	[HSC016KG] = { .pmin =       0, .pmax =   16000 },
+	[HSC025KG] = { .pmin =       0, .pmax =   25000 },
+	[HSC040KG] = { .pmin =       0, .pmax =   40000 },
+	[HSC060KG] = { .pmin =       0, .pmax =   60000 },
+	[HSC100KG] = { .pmin =       0, .pmax =  100000 },
+	[HSC160KG] = { .pmin =       0, .pmax =  160000 },
+	[HSC250KG] = { .pmin =       0, .pmax =  250000 },
+	[HSC400KG] = { .pmin =       0, .pmax =  400000 },
+	[HSC600KG] = { .pmin =       0, .pmax =  600000 },
+	[HSC001GG] = { .pmin =       0, .pmax = 1000000 },
+	[HSC015PA] = { .pmin =       0, .pmax =  103421 },
+	[HSC030PA] = { .pmin =       0, .pmax =  206843 },
+	[HSC060PA] = { .pmin =       0, .pmax =  413685 },
+	[HSC100PA] = { .pmin =       0, .pmax =  689476 },
+	[HSC150PA] = { .pmin =       0, .pmax = 1034214 },
+	[HSC0_5ND] = { .pmin =    -125, .pmax =     125 },
+	[HSC001ND] = { .pmin =    -249, .pmax =     249 },
+	[HSC002ND] = { .pmin =    -498, .pmax =     498 },
+	[HSC004ND] = { .pmin =    -996, .pmax =     996 },
+	[HSC005ND] = { .pmin =   -1245, .pmax =    1245 },
+	[HSC010ND] = { .pmin =   -2491, .pmax =    2491 },
+	[HSC020ND] = { .pmin =   -4982, .pmax =    4982 },
+	[HSC030ND] = { .pmin =   -7473, .pmax =    7473 },
+	[HSC001PD] = { .pmin =   -6895, .pmax =    6895 },
+	[HSC005PD] = { .pmin =  -34474, .pmax =   34474 },
+	[HSC015PD] = { .pmin = -103421, .pmax =  103421 },
+	[HSC030PD] = { .pmin = -206843, .pmax =  206843 },
+	[HSC060PD] = { .pmin = -413685, .pmax =  413685 },
+	[HSC001NG] = { .pmin =       0, .pmax =     249 },
+	[HSC002NG] = { .pmin =       0, .pmax =     498 },
+	[HSC004NG] = { .pmin =       0, .pmax =     996 },
+	[HSC005NG] = { .pmin =       0, .pmax =    1245 },
+	[HSC010NG] = { .pmin =       0, .pmax =    2491 },
+	[HSC020NG] = { .pmin =       0, .pmax =    4982 },
+	[HSC030NG] = { .pmin =       0, .pmax =    7473 },
+	[HSC001PG] = { .pmin =       0, .pmax =    6895 },
+	[HSC005PG] = { .pmin =       0, .pmax =   34474 },
+	[HSC015PG] = { .pmin =       0, .pmax =  103421 },
+	[HSC030PG] = { .pmin =       0, .pmax =  206843 },
+	[HSC060PG] = { .pmin =       0, .pmax =  413685 },
+	[HSC100PG] = { .pmin =       0, .pmax =  689476 },
+	[HSC150PG] = { .pmin =       0, .pmax = 1034214 },
 };
 
 /*
@@ -223,6 +298,26 @@ static int hsc_get_measurement(struct hsc_data *data)
 	return 0;
 }
 
+/*
+ * IIO ABI expects
+ * value = (conv + offset) * scale
+ *
+ * datasheet provides the following formula for determining the temperature
+ * temp[C] = conv * a + b
+ *   where a = 200/2047; b = -50
+ *
+ *  temp[C] = (conv + (b/a)) * a * (1000)
+ *  =>
+ *  scale = a * 1000 = .097703957 * 1000 = 97.703957
+ *  offset = b/a = -50 / .097703957 = -50000000 / 97704
+ *
+ *  based on the datasheet
+ *  pressure = (conv - Omin) * Q + Pmin =
+ *          ((conv - Omin) + Pmin/Q) * Q
+ *  =>
+ *  scale = Q = (Pmax - Pmin) / (Omax - Omin)
+ *  offset = Pmin/Q - Omin = Pmin * (Omax - Omin) / (Pmax - Pmin) - Omin
+ */
 static int hsc_read_raw(struct iio_dev *indio_dev,
 			struct iio_chan_spec const *channel, int *val,
 			int *val2, long mask)
@@ -251,27 +346,6 @@ static int hsc_read_raw(struct iio_dev *indio_dev,
 		default:
 			return -EINVAL;
 		}
-
-/*
- * IIO ABI expects
- * value = (conv + offset) * scale
- *
- * datasheet provides the following formula for determining the temperature
- * temp[C] = conv * a + b
- *   where a = 200/2047; b = -50
- *
- *  temp[C] = (conv + (b/a)) * a * (1000)
- *  =>
- *  scale = a * 1000 = .097703957 * 1000 = 97.703957
- *  offset = b/a = -50 / .097703957 = -50000000 / 97704
- *
- *  based on the datasheet
- *  pressure = (conv - Omin) * Q + Pmin =
- *          ((conv - Omin) + Pmin/Q) * Q
- *  =>
- *  scale = Q = (Pmax - Pmin) / (Omax - Omin)
- *  offset = Pmin/Q - Omin = Pmin * (Omax - Omin) / (Pmax - Pmin) - Omin
- */
 
 	case IIO_CHAN_INFO_SCALE:
 		switch (channel->type) {
@@ -331,15 +405,13 @@ static const struct hsc_chip_data hsc_chip = {
 	.num_channels = ARRAY_SIZE(hsc_channels),
 };
 
-int hsc_common_probe(struct device *dev, void *client, hsc_recv_fn recv_fn,
+int hsc_common_probe(struct device *dev, void *client, hsc_recv_fn recv,
 			const char *name)
 {
 	struct hsc_data *hsc;
 	struct iio_dev *indio_dev;
 	const char *triplet;
 	u64 tmp;
-	int index;
-	int found = 0;
 	int ret;
 
 	indio_dev = devm_iio_device_alloc(dev, sizeof(*hsc));
@@ -349,7 +421,7 @@ int hsc_common_probe(struct device *dev, void *client, hsc_recv_fn recv_fn,
 	hsc = iio_priv(indio_dev);
 
 	hsc->chip = &hsc_chip;
-	hsc->recv_cb = recv_fn;
+	hsc->recv_cb = recv;
 	hsc->client = client;
 
 	ret = device_property_read_u32(dev, "honeywell,transfer-function",
@@ -368,7 +440,7 @@ int hsc_common_probe(struct device *dev, void *client, hsc_recv_fn recv_fn,
 		return dev_err_probe(dev, ret,
 			"honeywell,pressure-triplet could not be read\n");
 
-	if (strncmp(triplet, "NA", 2) == 0) {
+	if (str_has_prefix(triplet, "NA")) {
 		ret = device_property_read_u32(dev, "honeywell,pmin-pascal",
 					       &hsc->pmin);
 		if (ret)
@@ -380,20 +452,19 @@ int hsc_common_probe(struct device *dev, void *client, hsc_recv_fn recv_fn,
 			return dev_err_probe(dev, ret,
 				"honeywell,pmax-pascal could not be read\n");
 	} else {
-		for (index = 0; index < ARRAY_SIZE(hsc_range_config); index++) {
-			if (strncmp(hsc_range_config[index].triplet,
-				    triplet,
-				    HSC_PRESSURE_TRIPLET_LEN - 1) == 0) {
-				hsc->pmin = hsc_range_config[index].pmin;
-				hsc->pmax = hsc_range_config[index].pmax;
-				found = 1;
-				break;
-			}
-		}
-		if (hsc->pmin == hsc->pmax || !found)
+		ret = match_string(hsc_triplet_variants, HSC_VARIANTS_MAX,
+						triplet);
+		if (ret < 0)
 			return dev_err_probe(dev, -EINVAL,
 				"honeywell,pressure-triplet is invalid\n");
+
+		hsc->pmin = hsc_range_config[ret].pmin;
+		hsc->pmax = hsc_range_config[ret].pmax;
 	}
+
+	if (hsc->pmin >= hsc->pmax)
+		return dev_err_probe(dev, -EINVAL,
+			"pressure limits are invalid\n");
 
 	ret = devm_regulator_get_enable(dev, "vdd");
 	if (ret)
