@@ -8,7 +8,6 @@
 #ifndef _HSC030PA_H
 #define _HSC030PA_H
 
-#include <linux/mutex.h>
 #include <linux/types.h>
 
 #define HSC_REG_MEASUREMENT_RD_SIZE 4
@@ -25,12 +24,10 @@ typedef int (*hsc_recv_fn)(struct hsc_data *);
 
 /**
  * struct hsc_data
- * @client: either i2c or spi kernel interface struct for current dev
+ * @dev: current device structure
  * @chip: structure containing chip's channel properties
- * @lock: lock protecting chip reads
- * @recv: function that implements the chip reads
- * @is_valid: false if last transfer has failed
- * @buffer: raw conversion data
+ * @recv_cb: function that implements the chip reads
+ * @is_valid: true if last transfer has been validated
  * @pmin: minimum measurable pressure limit
  * @pmax: maximum measurable pressure limit
  * @outmin: minimum raw pressure in counts (based on transfer function)
@@ -40,14 +37,13 @@ typedef int (*hsc_recv_fn)(struct hsc_data *);
  * @p_scale_dec: pressure scale, decimal places
  * @p_offset: pressure offset
  * @p_offset_dec: pressure offset, decimal places
+ * @buffer: raw conversion data
  */
 struct hsc_data {
-	void *client;
+	struct device *dev;
 	const struct hsc_chip_data *chip;
-	struct mutex lock;
 	hsc_recv_fn recv_cb;
 	bool is_valid;
-	u8 buffer[HSC_REG_MEASUREMENT_RD_SIZE] __aligned(IIO_DMA_MINALIGN);
 	s32 pmin;
 	s32 pmax;
 	u32 outmin;
@@ -57,6 +53,7 @@ struct hsc_data {
 	s32 p_scale_dec;
 	s64 p_offset;
 	s32 p_offset_dec;
+	u8 buffer[HSC_REG_MEASUREMENT_RD_SIZE] __aligned(IIO_DMA_MINALIGN);
 };
 
 struct hsc_chip_data {
@@ -72,7 +69,6 @@ enum hsc_func_id {
 	HSC_FUNCTION_F,
 };
 
-int hsc_common_probe(struct device *dev, void *client,
-	hsc_recv_fn recv, const char *name);
+int hsc_common_probe(struct device *dev, hsc_recv_fn recv);
 
 #endif

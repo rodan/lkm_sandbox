@@ -39,6 +39,8 @@
 #define HSC_TEMPERATURE_MASK     GENMASK(15, 5)
 #define HSC_PRESSURE_MASK        GENMASK(29, 16)
 
+static const char hsc_iio_dev_name[] = "hsc030pa";
+
 struct hsc_func_spec {
 	u32 output_min;
 	u32 output_max;
@@ -286,7 +288,6 @@ static int hsc_get_measurement(struct hsc_data *data)
 	const struct hsc_chip_data *chip = data->chip;
 	int ret;
 
-	guard(mutex)(&data->lock);
 	ret = data->recv_cb(data);
 	if (ret < 0)
 		return ret;
@@ -325,7 +326,6 @@ static int hsc_read_raw(struct iio_dev *indio_dev,
 	struct hsc_data *data = iio_priv(indio_dev);
 	int ret;
 	u32 recvd;
-	int raw;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
@@ -336,12 +336,10 @@ static int hsc_read_raw(struct iio_dev *indio_dev,
 		recvd = get_unaligned_be32(data->buffer);
 		switch (channel->type) {
 		case IIO_PRESSURE:
-			raw = FIELD_GET(HSC_PRESSURE_MASK, recvd);
-			*val = raw;
+			*val = FIELD_GET(HSC_PRESSURE_MASK, recvd);
 			return IIO_VAL_INT;
 		case IIO_TEMP:
-			raw = FIELD_GET(HSC_TEMPERATURE_MASK, recvd);
-			*val = raw;
+			*val = FIELD_GET(HSC_TEMPERATURE_MASK, recvd);
 			return IIO_VAL_INT;
 		default:
 			return -EINVAL;
@@ -405,8 +403,7 @@ static const struct hsc_chip_data hsc_chip = {
 	.num_channels = ARRAY_SIZE(hsc_channels),
 };
 
-int hsc_common_probe(struct device *dev, void *client, hsc_recv_fn recv,
-			const char *name)
+int hsc_common_probe(struct device *dev, hsc_recv_fn recv)
 {
 	struct hsc_data *hsc;
 	struct iio_dev *indio_dev;
@@ -422,7 +419,7 @@ int hsc_common_probe(struct device *dev, void *client, hsc_recv_fn recv,
 
 	hsc->chip = &hsc_chip;
 	hsc->recv_cb = recv;
-	hsc->client = client;
+	hsc->dev = dev;
 
 	ret = device_property_read_u32(dev, "honeywell,transfer-function",
 				     &hsc->function);
@@ -446,6 +443,7 @@ int hsc_common_probe(struct device *dev, void *client, hsc_recv_fn recv,
 		if (ret)
 			return dev_err_probe(dev, ret,
 				"honeywell,pmin-pascal could not be read\n");
+
 		ret = device_property_read_u32(dev, "honeywell,pmax-pascal",
 					       &hsc->pmax);
 		if (ret)
@@ -476,13 +474,12 @@ int hsc_common_probe(struct device *dev, void *client, hsc_recv_fn recv,
 	tmp = div_s64(((s64)(hsc->pmax - hsc->pmin)) * MICRO,
 		      hsc->outmax - hsc->outmin);
 	hsc->p_scale = div_s64_rem(tmp, NANO, &hsc->p_scale_dec);
-	tmp = div_s64(((s64)hsc->pmin * (s64)(hsc->outmax - hsc->outmin)) *
-		      MICRO, hsc->pmax - hsc->pmin);
+	tmp = div_s64(((s64)hsc->pmin * (s64)(hsc->outmax - hsc->outmin)) * MICRO,
+		      hsc->pmax - hsc->pmin);
 	tmp -= (s64)hsc->outmin * MICRO;
 	hsc->p_offset = div_s64_rem(tmp, MICRO, &hsc->p_offset_dec);
 
-	mutex_init(&hsc->lock);
-	indio_dev->name = name;
+	indio_dev->name = hsc_iio_dev_name;
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->info = &hsc_info;
 	indio_dev->channels = hsc->chip->channels;

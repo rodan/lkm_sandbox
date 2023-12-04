@@ -18,20 +18,19 @@
 
 static int hsc_spi_recv(struct hsc_data *data)
 {
+	struct spi_device *spi = to_spi_device(data->dev);
 	struct spi_transfer xfer = {
 		.tx_buf = NULL,
 		.rx_buf = data->buffer,
 		.len = HSC_REG_MEASUREMENT_RD_SIZE,
 	};
 
-	return spi_sync_transfer(data->client, &xfer, 1);
+	return spi_sync_transfer(spi, &xfer, 1);
 }
 
 static int hsc_spi_probe(struct spi_device *spi)
 {
-	const struct spi_device_id *id = spi_get_device_id(spi);
-
-	return hsc_common_probe(&spi->dev, spi, hsc_spi_recv, id->name);
+	return hsc_common_probe(&spi->dev, hsc_spi_recv);
 }
 
 static const struct of_device_id hsc_spi_match[] = {

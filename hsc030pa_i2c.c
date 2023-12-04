@@ -19,7 +19,7 @@
 
 static int hsc_i2c_recv(struct hsc_data *data)
 {
-	struct i2c_client *client = data->client;
+	struct i2c_client *client = to_i2c_client(data->dev);
 	struct i2c_msg msg;
 	int ret;
 
@@ -35,12 +35,10 @@ static int hsc_i2c_recv(struct hsc_data *data)
 
 static int hsc_i2c_probe(struct i2c_client *client)
 {
-	const struct i2c_device_id *id = i2c_client_get_device_id(client);
-
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
 		return -EOPNOTSUPP;
 
-	return hsc_common_probe(&client->dev, client, hsc_i2c_recv, id->name);
+	return hsc_common_probe(&client->dev, hsc_i2c_recv);
 }
 
 static const struct of_device_id hsc_i2c_match[] = {
