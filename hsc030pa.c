@@ -39,8 +39,6 @@
 #define HSC_TEMPERATURE_MASK     GENMASK(15, 5)
 #define HSC_PRESSURE_MASK        GENMASK(29, 16)
 
-static const char hsc_iio_dev_name[] = "hsc030pa";
-
 struct hsc_func_spec {
 	u32 output_min;
 	u32 output_max;
@@ -60,10 +58,10 @@ static const struct hsc_func_spec hsc_func_spec[] = {
 };
 
 enum hsc_variants {
-	HSC001BA = 0x0, HSC1_6BA = 0x1, HSC2_5BA = 0x2, HSC004BA = 0x3,
-	HSC006BA = 0x4, HSC010BA = 0x5, HSC1_6MD = 0x6, HSC2_5MD = 0x7,
-	HSC004MD = 0x8, HSC006MD = 0x9, HSC010MD = 0xa, HSC016MD = 0xb,
-	HSC025MD = 0xc, HSC040MD = 0xd, HSC060MD = 0xe, HSC100MD = 0xf,
+	HSC001BA = 0x00, HSC1_6BA = 0x01, HSC2_5BA = 0x02, HSC004BA = 0x03,
+	HSC006BA = 0x04, HSC010BA = 0x05, HSC1_6MD = 0x06, HSC2_5MD = 0x07,
+	HSC004MD = 0x08, HSC006MD = 0x09, HSC010MD = 0x0a, HSC016MD = 0x0b,
+	HSC025MD = 0x0c, HSC040MD = 0x0d, HSC060MD = 0x0e, HSC100MD = 0x0f,
 	HSC160MD = 0x10, HSC250MD = 0x11, HSC400MD = 0x12, HSC600MD = 0x13,
 	HSC001BD = 0x14, HSC1_6BD = 0x15, HSC2_5BD = 0x16, HSC004BD = 0x17,
 	HSC2_5MG = 0x18, HSC004MG = 0x19, HSC006MG = 0x1a, HSC010MG = 0x1b,
@@ -267,7 +265,7 @@ static const struct hsc_range_config hsc_range_config[HSC_VARIANTS_MAX] = {
 	[HSC150PG] = { .pmin =       0, .pmax = 1034214 },
 };
 
-/*
+/**
  * hsc_measurement_is_valid() - validate last conversion via status bits
  * @data: structure containing instantiated sensor data
  * Return: true only if both status bits are zero
@@ -422,39 +420,41 @@ int hsc_common_probe(struct device *dev, hsc_recv_fn recv)
 	hsc->dev = dev;
 
 	ret = device_property_read_u32(dev, "honeywell,transfer-function",
-				     &hsc->function);
+				       &hsc->function);
 	if (ret)
 		return dev_err_probe(dev, ret,
-			"honeywell,transfer-function could not be read\n");
+			    "honeywell,transfer-function could not be read\n");
 	if (hsc->function > HSC_FUNCTION_F)
 		return dev_err_probe(dev, -EINVAL,
 				     "honeywell,transfer-function %d invalid\n",
 				     hsc->function);
 
 	ret = device_property_read_string(dev, "honeywell,pressure-triplet",
-					&triplet);
+					  &triplet);
 	if (ret)
 		return dev_err_probe(dev, ret,
-			"honeywell,pressure-triplet could not be read\n");
+			     "honeywell,pressure-triplet could not be read\n");
 
 	if (str_has_prefix(triplet, "NA")) {
 		ret = device_property_read_u32(dev, "honeywell,pmin-pascal",
 					       &hsc->pmin);
 		if (ret)
 			return dev_err_probe(dev, ret,
-				"honeywell,pmin-pascal could not be read\n");
+				  "honeywell,pmin-pascal could not be read\n");
 
 		ret = device_property_read_u32(dev, "honeywell,pmax-pascal",
 					       &hsc->pmax);
 		if (ret)
 			return dev_err_probe(dev, ret,
-				"honeywell,pmax-pascal could not be read\n");
+				  "honeywell,pmax-pascal could not be read\n");
 	} else {
-		ret = match_string(hsc_triplet_variants, HSC_VARIANTS_MAX,
-						triplet);
+		ret = device_property_match_property_string(dev,
+						  "honeywell,pressure-triplet",
+						  hsc_triplet_variants,
+						  HSC_VARIANTS_MAX);
 		if (ret < 0)
 			return dev_err_probe(dev, -EINVAL,
-				"honeywell,pressure-triplet is invalid\n");
+				    "honeywell,pressure-triplet is invalid\n");
 
 		hsc->pmin = hsc_range_config[ret].pmin;
 		hsc->pmax = hsc_range_config[ret].pmax;
@@ -462,7 +462,7 @@ int hsc_common_probe(struct device *dev, hsc_recv_fn recv)
 
 	if (hsc->pmin >= hsc->pmax)
 		return dev_err_probe(dev, -EINVAL,
-			"pressure limits are invalid\n");
+				     "pressure limits are invalid\n");
 
 	ret = devm_regulator_get_enable(dev, "vdd");
 	if (ret)
@@ -479,7 +479,7 @@ int hsc_common_probe(struct device *dev, hsc_recv_fn recv)
 	tmp -= (s64)hsc->outmin * MICRO;
 	hsc->p_offset = div_s64_rem(tmp, MICRO, &hsc->p_offset_dec);
 
-	indio_dev->name = hsc_iio_dev_name;
+	indio_dev->name = "hsc030pa";
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->info = &hsc_info;
 	indio_dev->channels = hsc->chip->channels;
