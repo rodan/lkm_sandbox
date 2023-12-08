@@ -11,10 +11,17 @@
 #ifndef _MPRLS0025PA_H
 #define _MPRLS0025PA_H
 
+#include <linux/delay.h>
 #include <linux/mutex.h>
 #include <linux/types.h>
 
 #define MPR_MEASUREMENT_RD_SIZE 4
+
+/* bits in i2c status byte */
+#define MPR_I2C_POWER	BIT(6)	/* device is powered */
+#define MPR_I2C_BUSY	BIT(5)	/* device is busy */
+#define MPR_I2C_MEMORY	BIT(2)	/* integrity test passed */
+#define MPR_I2C_MATH	BIT(0)	/* internal math saturation */
 
 struct device;
 
