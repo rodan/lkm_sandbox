@@ -2,7 +2,14 @@
 
 # chip variants based on the manufacturer datasheet
 # obtained via `pdftotext -layout`
-IN_FILE='ssc_variants.txt'
+
+#IN_FILE='ssc_variants.txt'
+#PREFIX='HSC'
+
+IN_FILE='mpr_variants.txt'
+PREFIX='MPR'
+
+PREFIX_LC=$(echo "${PREFIX}" | tr '[:upper:]' '[:lower:]')
 
 clean_d() {
     input_d=$1
@@ -26,7 +33,7 @@ prettify_hex() {
 
 create_c_file()
 {
-    echo -n 'enum hsc_variants {'
+    echo -n "enum ${PREFIX_LC}_variants {"
     i=0
     cat "${IN_FILE}" | while read -r line; do
         if [ $((i%4)) == 0 ]; then
@@ -38,13 +45,13 @@ create_c_file()
         enum=$(echo "${name}" | sed 's|\.|_|;')
         conv_dh "${i}"
         num=$(prettify_hex "${result}")
-        echo -n "HSC${enum} = ${num},"
+        echo -n "${PREFIX}${enum} = ${num},"
         i=$((i+1))
     done
-    echo -e " HSC_VARIANTS_MAX"
+    echo -e " ${PREFIX}_VARIANTS_MAX"
     echo -e '};\n'
 
-    echo -n 'static const char * const hsc_triplet_variants[HSC_VARIANTS_MAX] = {'
+    echo -n "static const char * const ${PREFIX_LC}_triplet_variants[${PREFIX}_VARIANTS_MAX] = {"
     i=0
     cat "${IN_FILE}" | while read -r line; do
         if [ $((i%3)) == 0 ]; then
@@ -54,30 +61,29 @@ create_c_file()
         fi
         name=$(echo "${line}" | awk '{ print $1}')
         enum=$(echo "${name}" | sed 's|\.|_|;')
-        echo -en "[HSC${enum}] = \"${name}\","
+        echo -en "[${PREFIX}${enum}] = \"${name}\","
         i=$((i+1))
     done
     echo -e '\n};\n'
 
     cat << EOF
 /**
- * struct hsc_range_config - pressure ranges based on the nomenclature
- * @triplet: 5-char string that defines the range, measurement unit and type
+ * struct ${PREFIX_LC}_range_config - list of pressure ranges based on nomenclature
  * @pmin: lowest pressure that can be measured
  * @pmax: highest pressure that can be measured
  */
-struct hsc_range_config {
+struct ${PREFIX_LC}_range_config {
 	const s32 pmin;
 	const s32 pmax;
 };
 
-// all values have been converted to pascals
-static const struct hsc_range_config hsc_range_config[HSC_VARIANTS_MAX] = {
+/* All min max limits have been converted to pascals */
+static const struct ${PREFIX_LC}_range_config ${PREFIX_LC}_range_config[${PREFIX}_VARIANTS_MAX] = {
 EOF
     cat "${IN_FILE}" | while read -r line; do
         name=$(echo "${line}" | awk '{ print $1}')
         enum=$(echo "${name}" | sed 's|\.|_|;')
-        #id=$(echo "HSC${name}" | sed 's|\.|_|')
+        #id=$(echo "${PREFIX}${name}" | sed 's|\.|_|')
         unit=$(echo "${line}" | awk '{ print $4}')
         mult=0
         case "${unit}" in
@@ -102,6 +108,9 @@ EOF
             inH2O)
                 mult=249.0889
                 ;;
+            mmHg)
+                mult=133.3223684
+                ;;
         esac
         min=$(echo "${line}" | awk '{ print $2}')
         min=$(echo "${min}*${mult}" | bc)
@@ -111,7 +120,7 @@ EOF
         max=$(printf "%.0f" "${max}")
 
         #echo "${name} ${id} ${min} ${max} ${unit}"
-        echo -e "\t[HSC${enum}] = { .pmin = ${min}, .pmax = ${max} },"
+        echo -e "\t[${PREFIX}${enum}] = { .pmin = ${min}, .pmax = ${max} },"
     done | column -t -R 6,9 | sed 's| \.|.|g;s| = |=|g;s| }|}|;s|^|\t|'
     echo '};'
 }
