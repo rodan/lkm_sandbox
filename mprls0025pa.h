@@ -11,7 +11,9 @@
 #ifndef _MPRLS0025PA_H
 #define _MPRLS0025PA_H
 
+#include <linux/completion.h>
 #include <linux/delay.h>
+#include <linux/device.h>
 #include <linux/mutex.h>
 #include <linux/types.h>
 
@@ -80,9 +82,9 @@ struct mpr_data {
 	u32 outmin;
 	u32 outmax;
 	int scale;
-	int scale2;
+	int scale_dec;
 	int offset;
-	int offset2;
+	int offset_dec;
 	struct gpio_desc *gpiod_reset;
 	int irq;
 	struct completion completion;

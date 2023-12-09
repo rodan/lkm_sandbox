@@ -13,7 +13,6 @@
  * 7-bit I2C default slave address: 0x18
  */
 
-#include <linux/device.h>
 #include <linux/i2c.h>
 #include <linux/math64.h>
 #include <linux/mod_devicetable.h>
@@ -61,8 +60,8 @@
  */
 
 struct mpr_func_spec {
-	u32			output_min;
-	u32			output_max;
+	u32 output_min;
+	u32 output_max;
 };
 
 /*
@@ -71,9 +70,9 @@ struct mpr_func_spec {
  * transfer function C: 20%   to 80%   of 2^24
  */
 static const struct mpr_func_spec mpr_func_spec[] = {
-	[MPR_FUNCTION_A] = {.output_min = 1677722, .output_max = 15099494},
-	[MPR_FUNCTION_B] = {.output_min =  419430, .output_max =  3774874},
-	[MPR_FUNCTION_C] = {.output_min = 3355443, .output_max = 13421773},
+	[MPR_FUNCTION_A] = { .output_min = 1677722, .output_max = 15099494 },
+	[MPR_FUNCTION_B] = { .output_min =  419430, .output_max =  3774874 },
+	[MPR_FUNCTION_C] = { .output_min = 3355443, .output_max = 13421773 },
 };
 
 enum mpr_variants {
@@ -152,8 +151,8 @@ static const struct iio_chan_spec mpr_channels[] = {
 	{
 		.type = IIO_PRESSURE,
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
-					BIT(IIO_CHAN_INFO_SCALE) |
-					BIT(IIO_CHAN_INFO_OFFSET),
+				      BIT(IIO_CHAN_INFO_SCALE) |
+				      BIT(IIO_CHAN_INFO_OFFSET),
 		.scan_index = 0,
 		.scan_type = {
 			.sign = 's',
@@ -259,11 +258,11 @@ static int mpr_read_raw(struct iio_dev *indio_dev,
 		return IIO_VAL_INT;
 	case IIO_CHAN_INFO_SCALE:
 		*val = data->scale;
-		*val2 = data->scale2;
+		*val2 = data->scale_dec;
 		return IIO_VAL_INT_PLUS_NANO;
 	case IIO_CHAN_INFO_OFFSET:
 		*val = data->offset;
-		*val2 = data->offset2;
+		*val2 = data->offset_dec;
 		return IIO_VAL_INT_PLUS_NANO;
 	default:
 		return -EINVAL;
@@ -339,14 +338,14 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn xfer)
 	/* use 64 bit calculation for preserving a reasonable precision */
 	scale = div_s64(((s64)(data->pmax - data->pmin)) * NANO,
 						data->outmax - data->outmin);
-	data->scale = div_s64_rem(scale, NANO, &data->scale2);
+	data->scale = div_s64_rem(scale, NANO, &data->scale_dec);
 	/*
 	 * multiply with NANO before dividing by scale and later divide by NANO
 	 * again.
 	 */
 	offset = ((-1LL) * (s64)data->outmin) * NANO -
 			div_s64(div_s64((s64)data->pmin * NANO, scale), NANO);
-	data->offset = div_s64_rem(offset, NANO, &data->offset2);
+	data->offset = div_s64_rem(offset, NANO, &data->offset_dec);
 
 #if 0
 	if (data->irq > 0) {

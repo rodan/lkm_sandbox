@@ -50,7 +50,7 @@ static int mpr_i2c_xfer(struct mpr_data *data)
 	}
 	if (ret != sizeof(wdata)) {
 		dev_err(dev, "received size doesn't fit - ret: %d / %u\n", ret,
-							(u32)sizeof(wdata));
+			(u32)sizeof(wdata));
 		return -EIO;
 	}
 
