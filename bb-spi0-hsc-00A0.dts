@@ -43,10 +43,12 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi0_pins>;
 
+/*
 	channel@0{
 		status = "disabled";
 		reg = <0>;
 	};
+*/
 
 	pressure@0{
 		compatible = "honeywell,hsc030pa";

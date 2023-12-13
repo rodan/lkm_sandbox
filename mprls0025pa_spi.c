@@ -20,13 +20,66 @@
 static int mpr_spi_xfer(struct mpr_data *data)
 {
 	struct spi_device *spi = to_spi_device(data->dev);
+	int ret, i;
+	u8 cmd[7] = {MPR_CMD_SYNC, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+	int nloops = 10;
 	struct spi_transfer xfer = {
-		.tx_buf = NULL,
+		.tx_buf = cmd,
 		.rx_buf = data->buffer,
-		.len = MPR_MEASUREMENT_RD_SIZE,
+		.len = 3,
 	};
 
-	return spi_sync_transfer(spi, &xfer, 1);
+	ret = spi_sync_transfer(spi, &xfer, 1);
+	if (ret)
+		return ret;
+
+	reinit_completion(&data->completion);
+	cmd[0] = MPR_CMD_NOP;
+
+	if (data->irq > 0) {
+		ret = wait_for_completion_timeout(&data->completion, HZ);
+		if (!ret) {
+			dev_err(data->dev, "timeout while waiting for eoc irq\n");
+			return -ETIMEDOUT;
+		}
+	} else {
+		xfer.len = 1;
+		/* wait until status indicates data is ready */
+		for (i = 0; i < nloops; i++) {
+			/*
+			 * datasheet only says to wait at least 5 ms for the
+			 * data but leave the maximum response time open
+			 * --> let's try it nloops (10) times which seems to be
+			 *     quite long
+			 */
+			usleep_range(5000, 10000);
+			ret = spi_sync_transfer(spi, &xfer, 1);
+			if (ret)
+				return ret;
+			if (data->buffer[0] == MPR_I2C_POWER)
+				break;
+		}
+		if (i == nloops) {
+			dev_err(data->dev, "timeout while reading\n");
+			return -ETIMEDOUT;
+		}
+	}
+
+	xfer.len = 7;
+	ret = spi_sync_transfer(spi, &xfer, 1);
+	if (ret)
+		return ret;
+
+	pr_info("got %02x %02x %02x %02x %02x %02x\n", data->buffer[1], data->buffer[2],
+		data->buffer[3], data->buffer[4], data->buffer[5], data->buffer[6]);
+
+	if (data->buffer[0] != MPR_I2C_POWER) {
+		dev_err(data->dev,
+			"unexpected status byte %02x\n", data->buffer[0]);
+		return -ETIMEDOUT;
+	}
+
+	return 0;
 }
 
 static int mpr_spi_probe(struct spi_device *spi)

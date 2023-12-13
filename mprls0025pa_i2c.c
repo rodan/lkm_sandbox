@@ -36,7 +36,7 @@ static int mpr_i2c_xfer(struct mpr_data *data)
 	struct device *dev = data->dev;
 	struct i2c_client *client = to_i2c_client(data->dev);
 	int ret, i;
-	u8 wdata[] = {0xAA, 0x00, 0x00};
+	u8 wdata[] = {MPR_CMD_SYNC, 0x00, 0x00};
 	s32 status;
 	int nloops = 10;
 	//u8 buf[4];

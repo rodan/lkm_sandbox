@@ -15,9 +15,12 @@
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/mutex.h>
+#include <linux/stddef.h>
 #include <linux/types.h>
 
-#define MPR_MEASUREMENT_RD_SIZE 4
+#define MPR_MEASUREMENT_RD_SIZE 7
+#define MPR_CMD_NOP     0xf0
+#define MPR_CMD_SYNC    0xaa
 
 /* bits in i2c status byte */
 #define MPR_I2C_POWER	BIT(6)	/* device is powered */

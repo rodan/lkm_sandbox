@@ -26,3 +26,6 @@ popd > /dev/null
 
 create_dtbo bb-spi0-hsc-00A0
 create_dtbo bb-i2c2-hsc-00A0
+create_dtbo bb-spi0-mpr-00A0
+
+

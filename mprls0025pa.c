@@ -13,7 +13,9 @@
  * 7-bit I2C default slave address: 0x18
  */
 
-#include <linux/i2c.h>
+#include <linux/array_size.h>
+#include <linux/bitfield.h>
+#include <linux/bits.h>
 #include <linux/math64.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
@@ -58,6 +60,8 @@
  *                note: With all sensors from the datasheet pmin = 0
  *                which reduces the offset to (-1 * outputmin)
  */
+
+#define MPR_PRESSURE_MASK GENMASK(23, 0)
 
 struct mpr_func_spec {
 	u32 output_min;
@@ -227,7 +231,7 @@ static irqreturn_t mpr_trigger_handler(int irq, void *p)
 		goto err;
 
 	iio_push_to_buffers_with_timestamp(indio_dev, &data->chan,
-						iio_get_time_ns(indio_dev));
+					   iio_get_time_ns(indio_dev));
 
 err:
 	mutex_unlock(&data->lock);
@@ -240,21 +244,20 @@ static int mpr_read_raw(struct iio_dev *indio_dev,
 	struct iio_chan_spec const *chan, int *val, int *val2, long mask)
 {
 	int ret;
-	s32 pressure;
 	struct mpr_data *data = iio_priv(indio_dev);
+	u32 recvd;
 
 	if (chan->type != IIO_PRESSURE)
 		return -EINVAL;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		mutex_lock(&data->lock);
-		//ret = mpr_read_pressure(data, &pressure);
 		ret = mpr_read_pressure(data);
-		mutex_unlock(&data->lock);
 		if (ret < 0)
 			return ret;
-		*val = pressure;
+
+		recvd = get_unaligned_be32(data->buffer);
+		*val = FIELD_GET(MPR_PRESSURE_MASK, recvd);
 		return IIO_VAL_INT;
 	case IIO_CHAN_INFO_SCALE:
 		*val = data->scale;
@@ -278,6 +281,7 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn xfer)
 	int ret;
 	struct mpr_data *data;
 	struct iio_dev *indio_dev;
+	const char *triplet;
 	//struct device *dev = &client->dev;
 	s64 scale, offset;
 
@@ -299,52 +303,74 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn xfer)
 	indio_dev->num_channels = ARRAY_SIZE(mpr_channels);
 	indio_dev->modes = INDIO_DIRECT_MODE;
 
-	ret = devm_regulator_get_enable(dev, "vdd");
+	ret = device_property_read_u32(dev,
+			       "honeywell,transfer-function", &data->function);
 	if (ret)
 		return dev_err_probe(dev, ret,
-				"can't get and enable vdd supply\n");
+			    "honeywell,transfer-function could not be read\n");
+	if (data->function > MPR_FUNCTION_C)
+		return dev_err_probe(dev, -EINVAL,
+				     "honeywell,transfer-function %d invalid\n",
+				     data->function);
 
-	if (dev_fwnode(dev)) {
+	ret = device_property_read_string(dev, "honeywell,pressure-triplet",
+					  &triplet);
+	if (ret)
+		return dev_err_probe(dev, ret,
+			     "honeywell,pressure-triplet could not be read\n");
+
+	if (str_has_prefix(triplet, "NA")) {
 		ret = device_property_read_u32(dev, "honeywell,pmin-pascal",
-								&data->pmin);
+					       &data->pmin);
 		if (ret)
 			return dev_err_probe(dev, ret,
-				"honeywell,pmin-pascal could not be read\n");
+				  "honeywell,pmin-pascal could not be read\n");
+
 		ret = device_property_read_u32(dev, "honeywell,pmax-pascal",
-								&data->pmax);
+					       &data->pmax);
 		if (ret)
 			return dev_err_probe(dev, ret,
-				"honeywell,pmax-pascal could not be read\n");
-		ret = device_property_read_u32(dev,
-				"honeywell,transfer-function", &data->function);
-		if (ret)
-			return dev_err_probe(dev, ret,
-				"honeywell,transfer-function could not be read\n");
-		if (data->function > MPR_FUNCTION_C)
-			return dev_err_probe(dev, -EINVAL,
-				"honeywell,transfer-function %d invalid\n",
-								data->function);
+				  "honeywell,pmax-pascal could not be read\n");
 	} else {
+		ret = device_property_match_property_string(dev,
+						  "honeywell,pressure-triplet",
+						  mpr_triplet_variants,
+						  MPR_VARIANTS_MAX);
+		if (ret < 0)
+			return dev_err_probe(dev, -EINVAL,
+				    "honeywell,pressure-triplet is invalid\n");
+
+		data->pmin = mpr_range_config[ret].pmin;
+		data->pmax = mpr_range_config[ret].pmax;
+	}
+
+	if (data->pmin >= data->pmax)
+		return dev_err_probe(dev, -EINVAL,
+				     "pressure limits are invalid\n");
+
+	ret = devm_regulator_get_enable(dev, "vdd");
+	if (ret)
+		return dev_err_probe(dev, ret, "can't get vdd supply\n");
+
+#if 0
+	if (dev_fwnode(dev)) {
 		/* when loaded as i2c device we need to use default values */
 		dev_notice(dev, "firmware node not found; using defaults\n");
 		data->pmin = 0;
 		data->pmax = 172369; /* 25 psi */
 		data->function = MPR_FUNCTION_A;
 	}
+#endif
 
 	data->outmin = mpr_func_spec[data->function].output_min;
 	data->outmax = mpr_func_spec[data->function].output_max;
 
 	/* use 64 bit calculation for preserving a reasonable precision */
 	scale = div_s64(((s64)(data->pmax - data->pmin)) * NANO,
-						data->outmax - data->outmin);
+			data->outmax - data->outmin);
 	data->scale = div_s64_rem(scale, NANO, &data->scale_dec);
-	/*
-	 * multiply with NANO before dividing by scale and later divide by NANO
-	 * again.
-	 */
 	offset = ((-1LL) * (s64)data->outmin) * NANO -
-			div_s64(div_s64((s64)data->pmin * NANO, scale), NANO);
+		 div_s64(div_s64((s64)data->pmin * NANO, scale), NANO);
 	data->offset = div_s64_rem(offset, NANO, &data->offset_dec);
 
 #if 0
@@ -358,7 +384,7 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn xfer)
 #endif
 
 	data->gpiod_reset = devm_gpiod_get_optional(dev, "reset",
-							GPIOD_OUT_HIGH);
+						    GPIOD_OUT_HIGH);
 	if (IS_ERR(data->gpiod_reset))
 		return dev_err_probe(dev, PTR_ERR(data->gpiod_reset),
 						"request reset-gpio failed\n");
@@ -366,15 +392,15 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn xfer)
 	mpr_reset(data);
 
 	ret = devm_iio_triggered_buffer_setup(dev, indio_dev, NULL,
-						mpr_trigger_handler, NULL);
+					      mpr_trigger_handler, NULL);
 	if (ret)
 		return dev_err_probe(dev, ret,
-					"iio triggered buffer setup failed\n");
+				     "iio triggered buffer setup failed\n");
 
 	ret = devm_iio_device_register(dev, indio_dev);
 	if (ret)
 		return dev_err_probe(dev, ret,
-					"unable to register iio device\n");
+				     "unable to register iio device\n");
 
 	return 0;
 }
