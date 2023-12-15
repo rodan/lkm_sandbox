@@ -276,7 +276,7 @@ static const struct iio_info mpr_info = {
 	.read_raw = &mpr_read_raw,
 };
 
-int mpr_common_probe(struct device *dev, mpr_xfer_fn xfer)
+int mpr_common_probe(struct device *dev, mpr_xfer_fn xfer, int irq)
 {
 	int ret;
 	struct mpr_data *data;
@@ -292,7 +292,7 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn xfer)
 	data = iio_priv(indio_dev);
 	data->dev = dev;
 	data->xfer_cb = xfer;
-	// data->irq = client->irq;  !!FIXME
+	data->irq = irq;
 
 	mutex_init(&data->lock);
 	init_completion(&data->completion);
@@ -373,15 +373,13 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn xfer)
 		 div_s64(div_s64((s64)data->pmin * NANO, scale), NANO);
 	data->offset = div_s64_rem(offset, NANO, &data->offset_dec);
 
-#if 0
 	if (data->irq > 0) {
 		ret = devm_request_irq(dev, data->irq, mpr_eoc_handler,
-				IRQF_TRIGGER_RISING, client->name, data);
+				IRQF_TRIGGER_RISING, dev_name(dev), data);
 		if (ret)
 			return dev_err_probe(dev, ret,
 				"request irq %d failed\n", data->irq);
 	}
-#endif
 
 	data->gpiod_reset = devm_gpiod_get_optional(dev, "reset",
 						    GPIOD_OUT_HIGH);

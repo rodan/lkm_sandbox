@@ -114,7 +114,7 @@ static int mpr_i2c_probe(struct i2c_client *client)
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_READ_BYTE))
 		return -EOPNOTSUPP;
 
-	return mpr_common_probe(&client->dev, mpr_i2c_xfer);
+	return mpr_common_probe(&client->dev, mpr_i2c_xfer, client->irq);
 }
 
 

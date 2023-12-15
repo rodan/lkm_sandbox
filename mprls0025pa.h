@@ -103,6 +103,6 @@ struct hsc_chip_data {
 };
 #endif
 
-int mpr_common_probe(struct device *dev, mpr_xfer_fn recv);
+int mpr_common_probe(struct device *dev, mpr_xfer_fn recv, int irq);
 
 #endif

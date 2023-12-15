@@ -84,7 +84,7 @@ static int mpr_spi_xfer(struct mpr_data *data)
 
 static int mpr_spi_probe(struct spi_device *spi)
 {
-	return mpr_common_probe(&spi->dev, mpr_spi_xfer);
+	return mpr_common_probe(&spi->dev, mpr_spi_xfer, spi->irq);
 }
 
 static const struct of_device_id mpr_spi_match[] = {
