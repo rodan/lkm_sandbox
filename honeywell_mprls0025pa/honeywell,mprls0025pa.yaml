@@ -116,10 +116,28 @@ examples:
             reg = <0x18>;
             reset-gpios = <&gpio3 19 GPIO_ACTIVE_HIGH>;
             interrupt-parent = <&gpio3>;
-            interrupts = <21 IRQ_TYPE_EDGE_FALLING>;
-            honeywell,pmin-pascal = <0>;
-            honeywell,pmax-pascal = <172369>;
-            honeywell,transfer-function = <1>;
+            interrupts = <21 IRQ_TYPE_EDGE_RISING>;
+
+            honeywell,pressure-triplet = "0025PA";
+            honeywell,transfer-function = <0>;
             vdd-supply = <&vcc_3v3>;
         };
     };
+  - |
+    spi {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        pressure@0 {
+            compatible = "honeywell,mprls0025pa";
+            reg = <0>;
+            spi-max-frequency = <800000>;
+            reset-gpios = <&gpio1 28 GPIO_ACTIVE_HIGH>;
+            interrupt-parent = <&gpio0>;
+            interrupts = <30 IRQ_TYPE_EDGE_RISING>;
+
+            honeywell,pressure-triplet = "0015PA";
+            honeywell,transfer-function = <0>;
+        };
+    };
+...
