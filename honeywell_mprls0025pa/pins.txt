@@ -1,5 +1,5 @@
 
-mpr breakout board
+mpr breakout board (to be used with BeagleBone Black)
 
 Bk	GND	10	P9_1	Br
 Red	Vcc	12	P9_3	WBr

@@ -1,5 +1,5 @@
 
-hsc breakout board
+hsc breakout board (to be used with BeagleBone Black)
 
 Bl	Gnd	P9_1
 Br	Vcc	P9_3
