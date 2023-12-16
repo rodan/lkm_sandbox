@@ -31,9 +31,9 @@ static int mpr_i2c_read(struct mpr_data *data, const u8 unused, const u8 pkt_len
 static int mpr_i2c_write(struct mpr_data *data, const u8 cmd, const u8 unused)
 {
 	struct i2c_client *client = to_i2c_client(data->dev);
-	u8 wdata[3];
+	u8 wdata[MPR_PKT_SYNC_LEN];
 
-	return i2c_master_send(client, wdata, 3);
+	return i2c_master_send(client, wdata, MPR_PKT_SYNC_LEN);
 }
 
 static int mpr_i2c_probe(struct i2c_client *client)
