@@ -1,0 +1,11 @@
+
+hsc breakout board
+
+Bl	Gnd	P9_1
+Br	Vcc	P9_3
+WGr     CS	P9_17
+WOr     SCL	P9_19	I2C2SCL
+WBlu    SDA	P9_20	I2C2SDA
+WBr     MISO	P9_21	SPI0_MISO
+Green   CLK	P9_22	SPI0_CLK
+

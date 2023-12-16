@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: GPL-2.0-only
+
+/dts-v1/;
+/plugin/;
+
+/*
+ * Helper to show loaded overlays under: /proc/device-tree/chosen/overlays/
+ */
+&{/chosen} {
+	overlays {
+		bb-i2c2-hsc-00A0.kernel = __TIMESTAMP__;
+	};
+};
+
+&i2c2 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	pressure@28 {
+		compatible = "honeywell,hsc030pa";
+		reg = <0x28>;
+
+		honeywell,transfer-function = <0>;
+		honeywell,pressure-triplet = "030PA";
+
+		// in case of a custom chip, use NA as pressure-triplet
+		// and populate pmin-pascal and pmax-pascal
+		// with the range limits converted into pascals
+		//honeywell,pressure-triplet = "NA";
+		//honeywell,pmin-pascal = <(-4000000)>;
+		//honeywell,pmax-pascal = <200000>;
+
+		status = "okay";
+	};
+};

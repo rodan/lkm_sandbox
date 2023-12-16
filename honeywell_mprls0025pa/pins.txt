@@ -1,0 +1,12 @@
+
+mpr breakout board
+
+Bk	GND	10	P9_1	Br
+Red	Vcc	12	P9_3	WBr
+Bl	EOC	8	P9_11	Bl
+Wh	CS	1	P9_17	WOr
+Ye	MOSI	2	P9_18	WGr
+Br	MISO	7	P9_21	WBl
+Gr	CLK	3	P9_22	Gr
+unused				Or
+
