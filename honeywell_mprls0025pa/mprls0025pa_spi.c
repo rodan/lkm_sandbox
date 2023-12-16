@@ -36,7 +36,7 @@ static int mpr_spi_xfer(struct mpr_data *data, const u8 cmd, const u8 pkt_len)
 
 static int mpr_spi_probe(struct spi_device *spi)
 {
-	return mpr_common_probe(&spi->dev, mpr_spi_xfer, spi->irq);
+	return mpr_common_probe(&spi->dev, mpr_spi_xfer, mpr_spi_xfer, spi->irq);
 }
 
 static const struct of_device_id mpr_spi_match[] = {

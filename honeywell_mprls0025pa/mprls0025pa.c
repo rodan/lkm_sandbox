@@ -5,12 +5,8 @@
  * Copyright (c) Andreas Klinger <ak@it-klinger.de>
  *
  * Data sheet:
- *  https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/siot/en-us/
- *    products/sensors/pressure-sensors/board-mount-pressure-sensors/
- *    micropressure-mpr-series/documents/
- *    sps-siot-mpr-series-datasheet-32332628-ciid-172626.pdf
+ *  https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/siot/en-us/products/sensors/pressure-sensors/board-mount-pressure-sensors/micropressure-mpr-series/documents/sps-siot-mpr-series-datasheet-32332628-ciid-172626.pdf
  *
- * 7-bit I2C default slave address: 0x18
  */
 
 #include <linux/array_size.h>
@@ -178,7 +174,7 @@ static void mpr_reset(struct mpr_data *data)
 }
 
 /**
- * mpr_read_pressure() - Read pressure value from sensor via I2C
+ * mpr_read_conversion() - Read pressure value from sensor via I2C
  * @data: Pointer to private data struct.
  *
  * If there is an end of conversion (EOC) interrupt registered the function
@@ -190,7 +186,7 @@ static void mpr_reset(struct mpr_data *data)
  * * -ETIMEDOUT	- Timeout while waiting for the EOC interrupt or busy flag is
  *		  still set after nloops attempts of reading
  */
-static int mpr_read_pressure(struct mpr_data *data)
+static int mpr_read_conversion(struct mpr_data *data)
 {
 	struct device *dev = data->dev;
 	int ret, i;
@@ -198,7 +194,7 @@ static int mpr_read_pressure(struct mpr_data *data)
 
 	reinit_completion(&data->completion);
 
-	ret = data->xfer_cb(data, MPR_CMD_SYNC, MPR_PKT_SYNC_LEN);
+	ret = data->write_cb(data, MPR_CMD_SYNC, MPR_PKT_SYNC_LEN);
 	if (ret < 0) {
 		dev_err(dev, "error while writing ret: %d\n", ret);
 		return ret;
@@ -220,7 +216,7 @@ static int mpr_read_pressure(struct mpr_data *data)
 			 *     quite long
 			 */
 			usleep_range(5000, 10000);
-			ret = data->xfer_cb(data, MPR_CMD_NOP, 1);
+			ret = data->read_cb(data, MPR_CMD_NOP, 1);
 			if (ret < 0) {
 				dev_err(dev,
 					"error while reading, status: %d\n",
@@ -236,7 +232,7 @@ static int mpr_read_pressure(struct mpr_data *data)
 		}
 	}
 
-	ret = data->xfer_cb(data, MPR_CMD_NOP, MPR_PKT_NOP_LEN);
+	ret = data->read_cb(data, MPR_CMD_NOP, MPR_PKT_NOP_LEN);
 	if (ret < 0)
 		return ret;
 
@@ -266,7 +262,7 @@ static irqreturn_t mpr_trigger_handler(int irq, void *p)
 	struct mpr_data *data = iio_priv(indio_dev);
 
 	mutex_lock(&data->lock);
-	ret = mpr_read_pressure(data);
+	ret = mpr_read_conversion(data);
 	if (ret < 0)
 		goto err;
 
@@ -292,7 +288,7 @@ static int mpr_read_raw(struct iio_dev *indio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		ret = mpr_read_pressure(data);
+		ret = mpr_read_conversion(data);
 		if (ret < 0)
 			return ret;
 
@@ -316,7 +312,8 @@ static const struct iio_info mpr_info = {
 	.read_raw = &mpr_read_raw,
 };
 
-int mpr_common_probe(struct device *dev, mpr_xfer_fn xfer, int irq)
+int mpr_common_probe(struct device *dev, mpr_xfer_fn read, mpr_xfer_fn write,
+		     int irq)
 {
 	int ret;
 	struct mpr_data *data;
@@ -331,7 +328,8 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn xfer, int irq)
 
 	data = iio_priv(indio_dev);
 	data->dev = dev;
-	data->xfer_cb = xfer;
+	data->read_cb = read;
+	data->write_cb = write;
 	data->irq = irq;
 
 	mutex_init(&data->lock);

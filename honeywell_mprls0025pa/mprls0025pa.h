@@ -60,7 +60,8 @@ struct mpr_chan {
 /**
  * struct mpr_data
  * @dev: current device structure
- * @xfer_cb: function that implements the chip reads
+ * @read_cb: function that implements the sensor reads
+ * @write_cb: function that implements the sensor writes
  * @pmin: minimal pressure in pascal
  * @pmax: maximal pressure in pascal
  * @function: transfer function
@@ -79,7 +80,8 @@ struct mpr_chan {
  */
 struct mpr_data {
 	struct device *dev;
-	mpr_xfer_fn xfer_cb;
+	mpr_xfer_fn read_cb;
+	mpr_xfer_fn write_cb;
 	struct mutex lock;
 	u32 pmin;
 	u32 pmax;
@@ -105,6 +107,7 @@ struct hsc_chip_data {
 };
 #endif
 
-int mpr_common_probe(struct device *dev, mpr_xfer_fn recv, int irq);
+int mpr_common_probe(struct device *dev, mpr_xfer_fn read, mpr_xfer_fn write,
+		     int irq);
 
 #endif

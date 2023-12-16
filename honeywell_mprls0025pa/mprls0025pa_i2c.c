@@ -17,23 +17,23 @@
 
 #include "mprls0025pa.h"
 
-static int mpr_i2c_xfer(struct mpr_data *data, const u8 cmd, const u8 pkt_len)
+static int mpr_i2c_read(struct mpr_data *data, const u8 unused, const u8 pkt_len)
 {
 	struct i2c_client *client = to_i2c_client(data->dev);
-	struct i2c_msg msg;
 
 	if (pkt_len > MPR_MEASUREMENT_RD_SIZE)
 		return -EOVERFLOW;
 
-	msg.addr = client->addr;
-	msg.flags = client->flags | I2C_M_RD;
-	msg.len = pkt_len;
-	msg.buf = data->buffer;
-
 	memset(data->buffer, 0, MPR_MEASUREMENT_RD_SIZE);
-	data->buffer[0] = cmd;
+	return i2c_master_recv(client, data->buffer, pkt_len);
+}
 
-	return i2c_transfer(client->adapter, &msg, 1);
+static int mpr_i2c_write(struct mpr_data *data, const u8 cmd, const u8 unused)
+{
+	struct i2c_client *client = to_i2c_client(data->dev);
+	u8 wdata[3];
+
+	return i2c_master_send(client, wdata, 3);
 }
 
 static int mpr_i2c_probe(struct i2c_client *client)
@@ -41,7 +41,8 @@ static int mpr_i2c_probe(struct i2c_client *client)
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_READ_BYTE))
 		return -EOPNOTSUPP;
 
-	return mpr_common_probe(&client->dev, mpr_i2c_xfer, client->irq);
+	return mpr_common_probe(&client->dev, mpr_i2c_read, mpr_i2c_write,
+				client->irq);
 }
 
 static const struct of_device_id mpr_i2c_match[] = {
