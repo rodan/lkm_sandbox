@@ -5,5 +5,5 @@
 
 the function is not yet present in the 6.7 upstream kernel and should be present only from [6.8 onward](https://lore.kernel.org/all/20231018203755.06cb1118@jic23-huawei/).
 
-for your convenience, you can use the `replace_property.sh` script to tweak your 6.7 kernel to include that function.
+for your convenience, you can either patch your 6.7 kernel with `property.patch` or use the `replace_property.sh` script to provide the needed function.
 
