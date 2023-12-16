@@ -14,7 +14,7 @@ as easy as
 make
 ```
 
-but if you're using the a kernel based on the mainline 6.7 tree then make sure to read about the required [patch](linux-iio_property).
+but if you're using a kernel based on the mainline 6.7 tree then make sure to read about the required [patch](linux-iio_property).
 
 ### device tree overlay
 
