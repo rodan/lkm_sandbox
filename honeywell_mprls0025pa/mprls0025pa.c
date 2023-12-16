@@ -390,16 +390,6 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn read, mpr_xfer_fn write,
 	if (ret)
 		return dev_err_probe(dev, ret, "can't get vdd supply\n");
 
-#if 0
-	if (dev_fwnode(dev)) {
-		/* when loaded as i2c device we need to use default values */
-		dev_notice(dev, "firmware node not found; using defaults\n");
-		data->pmin = 0;
-		data->pmax = 172369; /* 25 psi */
-		data->function = MPR_FUNCTION_A;
-	}
-#endif
-
 	data->outmin = mpr_func_spec[data->function].output_min;
 	data->outmax = mpr_func_spec[data->function].output_max;
 
