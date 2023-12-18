@@ -341,6 +341,13 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn read, mpr_xfer_fn write,
 	indio_dev->num_channels = ARRAY_SIZE(mpr_channels);
 	indio_dev->modes = INDIO_DIRECT_MODE;
 
+#ifdef TESTING_NOT_PART_OF_PRODUCTION_VERSION
+	/* when loaded as i2c device we need to use default values */
+	dev_notice(dev, "firmware node not found; using defaults\n");
+	data->pmin = 0;
+	data->pmax = 172369; /* 25 psi */
+	data->function = MPR_FUNCTION_A;
+#else
 	ret = device_property_read_u32(dev,
 			       "honeywell,transfer-function", &data->function);
 	if (ret)
@@ -381,6 +388,7 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn read, mpr_xfer_fn write,
 		data->pmin = mpr_range_config[ret].pmin;
 		data->pmax = mpr_range_config[ret].pmax;
 	}
+#endif
 
 	if (data->pmin >= data->pmax)
 		return dev_err_probe(dev, -EINVAL,
