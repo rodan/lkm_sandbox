@@ -321,6 +321,7 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn read, mpr_xfer_fn write,
 	const char *triplet;
 	//struct device *dev = &client->dev;
 	s64 scale, offset;
+	u32 func;
 
 	indio_dev = devm_iio_device_alloc(dev, sizeof(*data));
 	if (!indio_dev)
@@ -349,10 +350,11 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn read, mpr_xfer_fn write,
 	data->function = MPR_FUNCTION_A;
 #else
 	ret = device_property_read_u32(dev,
-			       "honeywell,transfer-function", &data->function);
+			       "honeywell,transfer-function", &func);
 	if (ret)
 		return dev_err_probe(dev, ret,
 			    "honeywell,transfer-function could not be read\n");
+	data->function = func - 1;
 	if (data->function > MPR_FUNCTION_C)
 		return dev_err_probe(dev, -EINVAL,
 				     "honeywell,transfer-function %d invalid\n",

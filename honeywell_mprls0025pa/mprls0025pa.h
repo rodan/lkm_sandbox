@@ -79,24 +79,24 @@ struct mpr_chan {
  * @buffer: raw conversion data
  */
 struct mpr_data {
-	struct device *dev;
-	mpr_xfer_fn read_cb;
-	mpr_xfer_fn write_cb;
-	struct mutex lock;
-	u32 pmin;
-	u32 pmax;
-	enum mpr_func_id function;
-	u32 outmin;
-	u32 outmax;
-	int scale;
-	int scale_dec;
-	int offset;
-	int offset_dec;
-	struct gpio_desc *gpiod_reset;
-	int irq;
-	struct completion completion;
-	struct mpr_chan chan;
-	u8 buffer[MPR_MEASUREMENT_RD_SIZE] __aligned(IIO_DMA_MINALIGN);
+	struct device		*dev;
+	mpr_xfer_fn		read_cb;
+	mpr_xfer_fn		write_cb;
+	struct mutex		lock;
+	u32			pmin;
+	u32			pmax;
+	enum mpr_func_id	function;
+	u32			outmin;
+	u32			outmax;
+	int			scale;
+	int			scale_dec;
+	int			offset;
+	int			offset_dec;
+	struct gpio_desc	*gpiod_reset;
+	int			irq;
+	struct completion	completion;
+	struct mpr_chan		chan;
+	u8			buffer[MPR_MEASUREMENT_RD_SIZE] __aligned(IIO_DMA_MINALIGN);
 };
 
 #if 0
