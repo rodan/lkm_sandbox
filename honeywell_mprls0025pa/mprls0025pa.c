@@ -258,6 +258,7 @@ static irqreturn_t mpr_eoc_handler(int irq, void *p)
 static irqreturn_t mpr_trigger_handler(int irq, void *p)
 {
 	int ret;
+	u32 recvd;
 	struct iio_poll_func *pf = p;
 	struct iio_dev *indio_dev = pf->indio_dev;
 	struct mpr_data *data = iio_priv(indio_dev);
@@ -267,6 +268,8 @@ static irqreturn_t mpr_trigger_handler(int irq, void *p)
 	if (ret < 0)
 		goto err;
 
+	recvd = get_unaligned_be32(data->buffer);
+	data->chan.pres = FIELD_GET(MPR_PRESSURE_MASK, recvd);
 	iio_push_to_buffers_with_timestamp(indio_dev, &data->chan,
 					   iio_get_time_ns(indio_dev));
 
@@ -319,7 +322,6 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn read, mpr_xfer_fn write,
 	struct mpr_data *data;
 	struct iio_dev *indio_dev;
 	const char *triplet;
-	//struct device *dev = &client->dev;
 	s64 scale, offset;
 	u32 func;
 

@@ -36,8 +36,6 @@ struct iio_chan_spec;
 struct iio_dev;
 
 struct mpr_data;
-struct mpr_chan;
-//struct hsc_chip_data;
 
 typedef int (*mpr_xfer_fn)(struct mpr_data *, const u8, const u8);
 
@@ -98,14 +96,6 @@ struct mpr_data {
 	struct mpr_chan		chan;
 	u8			buffer[MPR_MEASUREMENT_RD_SIZE] __aligned(IIO_DMA_MINALIGN);
 };
-
-#if 0
-struct hsc_chip_data {
-	bool (*valid)(struct hsc_data * data);
-	const struct iio_chan_spec *channels;
-	u8 num_channels;
-};
-#endif
 
 int mpr_common_probe(struct device *dev, mpr_xfer_fn read, mpr_xfer_fn write,
 		     int irq);

@@ -82,6 +82,9 @@ properties:
            NA]
     $ref: /schemas/types.yaml#/definitions/string
 
+  spi-max-frequency:
+    maximum: 800000
+
   vdd-supply:
     description: provide VDD power to the sensor.
 
