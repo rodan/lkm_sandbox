@@ -175,7 +175,7 @@ static void mpr_reset(struct mpr_data *data)
 }
 
 /**
- * mpr_read_conversion() - Read pressure value from sensor via I2C
+ * mpr_read_conversion() - Read pressure value from sensor
  * @data: Pointer to private data struct.
  *
  * If there is an end of conversion (EOC) interrupt registered the function
