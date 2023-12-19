@@ -119,7 +119,7 @@ examples:
             interrupts = <21 IRQ_TYPE_EDGE_RISING>;
 
             honeywell,pressure-triplet = "0025PA";
-            honeywell,transfer-function = <0>;
+            honeywell,transfer-function = <1>;
             vdd-supply = <&vcc_3v3>;
         };
     };
@@ -137,7 +137,7 @@ examples:
             interrupts = <30 IRQ_TYPE_EDGE_RISING>;
 
             honeywell,pressure-triplet = "0015PA";
-            honeywell,transfer-function = <0>;
+            honeywell,transfer-function = <1>;
         };
     };
 ...

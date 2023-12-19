@@ -12,6 +12,7 @@
 #include <linux/array_size.h>
 #include <linux/bitfield.h>
 #include <linux/bits.h>
+#include <linux/cleanup.h>
 #include <linux/math64.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
@@ -261,7 +262,7 @@ static irqreturn_t mpr_trigger_handler(int irq, void *p)
 	struct iio_dev *indio_dev = pf->indio_dev;
 	struct mpr_data *data = iio_priv(indio_dev);
 
-	mutex_lock(&data->lock);
+	guard(mutex)(&data->lock);
 	ret = mpr_read_conversion(data);
 	if (ret < 0)
 		goto err;
@@ -270,7 +271,6 @@ static irqreturn_t mpr_trigger_handler(int irq, void *p)
 					   iio_get_time_ns(indio_dev));
 
 err:
-	mutex_unlock(&data->lock);
 	iio_trigger_notify_done(indio_dev->trig);
 
 	return IRQ_HANDLED;

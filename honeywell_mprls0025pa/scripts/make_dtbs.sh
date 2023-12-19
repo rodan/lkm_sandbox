@@ -26,8 +26,6 @@ pushd "${LINUX_SRC}/arch/arm/boot/dts/ti/omap/" > /dev/null
 create_devboard_dtb 2>/dev/null
 popd > /dev/null
 
-create_dtbo bb-spi0-hsc-00A0
-create_dtbo bb-i2c2-hsc-00A0
 create_dtbo bb-spi0-mpr-00A0
 
 
