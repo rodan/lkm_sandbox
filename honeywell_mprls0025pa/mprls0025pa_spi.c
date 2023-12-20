@@ -17,26 +17,50 @@
 
 #include "mprls0025pa.h"
 
+struct mpr_spi_buf {
+	u8 tx[MPR_MEASUREMENT_RD_SIZE] __aligned(IIO_DMA_MINALIGN);
+};
+
+static int mpr_spi_init(struct device *dev)
+{
+	struct spi_device *spi = to_spi_device(dev);
+	struct mpr_spi_buf *buf;
+
+	buf = devm_kzalloc(dev, sizeof(*buf), GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
+
+	spi_set_drvdata(spi, buf);
+
+	return 0;
+}
+
 static int mpr_spi_xfer(struct mpr_data *data, const u8 cmd, const u8 pkt_len)
 {
 	struct spi_device *spi = to_spi_device(data->dev);
-	u8 tx_buf[MPR_MEASUREMENT_RD_SIZE];
+	struct mpr_spi_buf *buf = spi_get_drvdata(spi);
 	struct spi_transfer xfer;
 
 	if (pkt_len > MPR_MEASUREMENT_RD_SIZE)
 		return -EOVERFLOW;
 
-	tx_buf[0] = cmd;
-	xfer.tx_buf = tx_buf;
+	buf->tx[0] = cmd;
+	xfer.tx_buf = buf->tx;
 	xfer.rx_buf = data->buffer;
 	xfer.len = pkt_len;
 
 	return spi_sync_transfer(spi, &xfer, 1);
 }
 
+static const struct mpr_ops mpr_spi_ops = {
+	.init = mpr_spi_init,
+	.read = mpr_spi_xfer,
+	.write = mpr_spi_xfer,
+};
+
 static int mpr_spi_probe(struct spi_device *spi)
 {
-	return mpr_common_probe(&spi->dev, mpr_spi_xfer, mpr_spi_xfer, spi->irq);
+	return mpr_common_probe(&spi->dev, &mpr_spi_ops, spi->irq);
 }
 
 static const struct of_device_id mpr_spi_match[] = {

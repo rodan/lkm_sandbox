@@ -195,7 +195,7 @@ static int mpr_read_conversion(struct mpr_data *data)
 
 	reinit_completion(&data->completion);
 
-	ret = data->write_cb(data, MPR_CMD_SYNC, MPR_PKT_SYNC_LEN);
+	ret = data->ops->write(data, MPR_CMD_SYNC, MPR_PKT_SYNC_LEN);
 	if (ret < 0) {
 		dev_err(dev, "error while writing ret: %d\n", ret);
 		return ret;
@@ -217,7 +217,7 @@ static int mpr_read_conversion(struct mpr_data *data)
 			 *     quite long
 			 */
 			usleep_range(5000, 10000);
-			ret = data->read_cb(data, MPR_CMD_NOP, 1);
+			ret = data->ops->read(data, MPR_CMD_NOP, 1);
 			if (ret < 0) {
 				dev_err(dev,
 					"error while reading, status: %d\n",
@@ -233,7 +233,7 @@ static int mpr_read_conversion(struct mpr_data *data)
 		}
 	}
 
-	ret = data->read_cb(data, MPR_CMD_NOP, MPR_PKT_NOP_LEN);
+	ret = data->ops->read(data, MPR_CMD_NOP, MPR_PKT_NOP_LEN);
 	if (ret < 0)
 		return ret;
 
@@ -315,8 +315,7 @@ static const struct iio_info mpr_info = {
 	.read_raw = &mpr_read_raw,
 };
 
-int mpr_common_probe(struct device *dev, mpr_xfer_fn read, mpr_xfer_fn write,
-		     int irq)
+int mpr_common_probe(struct device *dev, const struct mpr_ops *ops, int irq)
 {
 	int ret;
 	struct mpr_data *data;
@@ -331,8 +330,7 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn read, mpr_xfer_fn write,
 
 	data = iio_priv(indio_dev);
 	data->dev = dev;
-	data->read_cb = read;
-	data->write_cb = write;
+	data->ops = ops;
 	data->irq = irq;
 
 	mutex_init(&data->lock);
@@ -344,15 +342,12 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn read, mpr_xfer_fn write,
 	indio_dev->num_channels = ARRAY_SIZE(mpr_channels);
 	indio_dev->modes = INDIO_DIRECT_MODE;
 
-#ifdef TESTING_NOT_PART_OF_PRODUCTION_VERSION
-	/* when loaded as i2c device we need to use default values */
-	dev_notice(dev, "firmware node not found; using defaults\n");
-	data->pmin = 0;
-	data->pmax = 172369; /* 25 psi */
-	data->function = MPR_FUNCTION_A;
-#else
+	ret = data->ops->init(data->dev);
+	if (ret)
+		return ret;
+
 	ret = device_property_read_u32(dev,
-			       "honeywell,transfer-function", &func);
+				       "honeywell,transfer-function", &func);
 	if (ret)
 		return dev_err_probe(dev, ret,
 			    "honeywell,transfer-function could not be read\n");
@@ -364,11 +359,7 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn read, mpr_xfer_fn write,
 
 	ret = device_property_read_string(dev, "honeywell,pressure-triplet",
 					  &triplet);
-	if (ret)
-		return dev_err_probe(dev, ret,
-			     "honeywell,pressure-triplet could not be read\n");
-
-	if (str_has_prefix(triplet, "NA")) {
+	if (ret) {
 		ret = device_property_read_u32(dev, "honeywell,pmin-pascal",
 					       &data->pmin);
 		if (ret)
@@ -392,7 +383,6 @@ int mpr_common_probe(struct device *dev, mpr_xfer_fn read, mpr_xfer_fn write,
 		data->pmin = mpr_range_config[ret].pmin;
 		data->pmax = mpr_range_config[ret].pmax;
 	}
-#endif
 
 	if (data->pmin >= data->pmax)
 		return dev_err_probe(dev, -EINVAL,

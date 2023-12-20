@@ -36,8 +36,7 @@ struct iio_chan_spec;
 struct iio_dev;
 
 struct mpr_data;
-
-typedef int (*mpr_xfer_fn)(struct mpr_data *, const u8, const u8);
+struct mpr_ops;
 
 enum mpr_func_id {
 	MPR_FUNCTION_A,
@@ -58,17 +57,17 @@ struct mpr_chan {
 /**
  * struct mpr_data
  * @dev: current device structure
- * @read_cb: function that implements the sensor reads
- * @write_cb: function that implements the sensor writes
+ * @ops: functions that implement the sensor reads/writes, bus init
+ * @lock: access to device during read
  * @pmin: minimal pressure in pascal
  * @pmax: maximal pressure in pascal
  * @function: transfer function
  * @outmin: minimum raw pressure in counts (based on transfer function)
  * @outmax: maximum raw pressure in counts (based on transfer function)
  * @scale: pressure scale
- * @scale2: pressure scale, decimal places
+ * @scale_dec: pressure scale, decimal places
  * @offset: pressure offset
- * @offset2: pressure offset, decimal places
+ * @offset_dec: pressure offset, decimal places
  * @gpiod_reset: reset
  * @irq: end of conversion irq. used to distinguish between irq mode and
  *       reading in a loop until data is ready
@@ -78,8 +77,7 @@ struct mpr_chan {
  */
 struct mpr_data {
 	struct device		*dev;
-	mpr_xfer_fn		read_cb;
-	mpr_xfer_fn		write_cb;
+	const struct mpr_ops	*ops;
 	struct mutex		lock;
 	u32			pmin;
 	u32			pmax;
@@ -94,10 +92,15 @@ struct mpr_data {
 	int			irq;
 	struct completion	completion;
 	struct mpr_chan		chan;
-	u8			buffer[MPR_MEASUREMENT_RD_SIZE] __aligned(IIO_DMA_MINALIGN);
+	u8	buffer[MPR_MEASUREMENT_RD_SIZE] __aligned(IIO_DMA_MINALIGN);
 };
 
-int mpr_common_probe(struct device *dev, mpr_xfer_fn read, mpr_xfer_fn write,
-		     int irq);
+struct mpr_ops {
+	int (*init)(struct device *);
+	int (*read)(struct mpr_data *, const u8, const u8);
+	int (*write)(struct mpr_data *, const u8, const u8);
+};
+
+int mpr_common_probe(struct device *dev, const struct mpr_ops *ops, int irq);
 
 #endif
