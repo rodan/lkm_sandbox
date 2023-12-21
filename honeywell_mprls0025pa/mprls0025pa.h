@@ -24,12 +24,6 @@
 #define MPR_PKT_NOP_LEN  MPR_MEASUREMENT_RD_SIZE
 #define MPR_PKT_SYNC_LEN 3
 
-/* bits in i2c status byte */
-#define MPR_I2C_POWER	BIT(6)	/* device is powered */
-#define MPR_I2C_BUSY	BIT(5)	/* device is busy */
-#define MPR_I2C_MEMORY	BIT(2)	/* integrity test passed */
-#define MPR_I2C_MATH	BIT(0)	/* internal math saturation */
-
 struct device;
 
 struct iio_chan_spec;
@@ -37,12 +31,6 @@ struct iio_dev;
 
 struct mpr_data;
 struct mpr_ops;
-
-enum mpr_func_id {
-	MPR_FUNCTION_A,
-	MPR_FUNCTION_B,
-	MPR_FUNCTION_C,
-};
 
 /**
  * struct mpr_chan
@@ -52,6 +40,12 @@ enum mpr_func_id {
 struct mpr_chan {
 	s32 pres;
 	s64 ts;
+};
+
+enum mpr_func_id {
+	MPR_FUNCTION_A,
+	MPR_FUNCTION_B,
+	MPR_FUNCTION_C,
 };
 
 /**
@@ -65,9 +59,9 @@ struct mpr_chan {
  * @outmin: minimum raw pressure in counts (based on transfer function)
  * @outmax: maximum raw pressure in counts (based on transfer function)
  * @scale: pressure scale
- * @scale_dec: pressure scale, decimal places
+ * @scale2: pressure scale, decimal number
  * @offset: pressure offset
- * @offset_dec: pressure offset, decimal places
+ * @offset2: pressure offset, decimal number
  * @gpiod_reset: reset
  * @irq: end of conversion irq. used to distinguish between irq mode and
  *       reading in a loop until data is ready
@@ -85,9 +79,9 @@ struct mpr_data {
 	u32			outmin;
 	u32			outmax;
 	int			scale;
-	int			scale_dec;
+	int			scale2;
 	int			offset;
-	int			offset_dec;
+	int			offset2;
 	struct gpio_desc	*gpiod_reset;
 	int			irq;
 	struct completion	completion;

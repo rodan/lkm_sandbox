@@ -12,7 +12,6 @@
 #include <linux/array_size.h>
 #include <linux/bitfield.h>
 #include <linux/bits.h>
-#include <linux/cleanup.h>
 #include <linux/math64.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
@@ -31,6 +30,14 @@
 #include <asm/unaligned.h>
 
 #include "mprls0025pa.h"
+
+/* bits in status byte */
+#define MPR_ST_POWER  BIT(6) /* device is powered */
+#define MPR_ST_BUSY   BIT(5) /* device is busy */
+#define MPR_ST_MEMORY BIT(2) /* integrity test passed */
+#define MPR_ST_MATH   BIT(0) /* internal math saturation */
+
+#define MPR_ST_ERR_FLAG  (MPR_ST_BUSY | MPR_ST_MEMORY | MPR_ST_MATH)
 
 /*
  * support _RAW sysfs interface:
@@ -58,18 +65,16 @@
  *                which reduces the offset to (-1 * outputmin)
  */
 
-#define MPR_PRESSURE_MASK GENMASK(23, 0)
-
-struct mpr_func_spec {
-	u32 output_min;
-	u32 output_max;
-};
-
 /*
  * transfer function A: 10%   to 90%   of 2^24
  * transfer function B:  2.5% to 22.5% of 2^24
  * transfer function C: 20%   to 80%   of 2^24
  */
+struct mpr_func_spec {
+	u32			output_min;
+	u32			output_max;
+};
+
 static const struct mpr_func_spec mpr_func_spec[] = {
 	[MPR_FUNCTION_A] = { .output_min = 1677722, .output_max = 15099494 },
 	[MPR_FUNCTION_B] = { .output_min =  419430, .output_max =  3774874 },
@@ -152,8 +157,8 @@ static const struct iio_chan_spec mpr_channels[] = {
 	{
 		.type = IIO_PRESSURE,
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
-				      BIT(IIO_CHAN_INFO_SCALE) |
-				      BIT(IIO_CHAN_INFO_OFFSET),
+					BIT(IIO_CHAN_INFO_SCALE) |
+					BIT(IIO_CHAN_INFO_OFFSET),
 		.scan_index = 0,
 		.scan_type = {
 			.sign = 's',
@@ -175,8 +180,11 @@ static void mpr_reset(struct mpr_data *data)
 }
 
 /**
- * mpr_read_conversion() - Read pressure value from sensor
+ * mpr_read_pressure() - Read pressure value from sensor
  * @data: Pointer to private data struct.
+ * @press: Output value read from sensor.
+ *
+ * Reading from the sensor by sending and receiving telegrams.
  *
  * If there is an end of conversion (EOC) interrupt registered the function
  * waits for a maximum of one second for the interrupt.
@@ -187,7 +195,7 @@ static void mpr_reset(struct mpr_data *data)
  * * -ETIMEDOUT	- Timeout while waiting for the EOC interrupt or busy flag is
  *		  still set after nloops attempts of reading
  */
-static int mpr_read_conversion(struct mpr_data *data)
+static int mpr_read_pressure(struct mpr_data *data, s32 *press)
 {
 	struct device *dev = data->dev;
 	int ret, i;
@@ -224,7 +232,7 @@ static int mpr_read_conversion(struct mpr_data *data)
 					ret);
 				return ret;
 			}
-			if (data->buffer[0] == MPR_I2C_POWER)
+			if ((data->buffer[0] & MPR_ST_ERR_FLAG) == 0)
 				break;
 		}
 		if (i == nloops) {
@@ -237,11 +245,15 @@ static int mpr_read_conversion(struct mpr_data *data)
 	if (ret < 0)
 		return ret;
 
-	if (data->buffer[0] != MPR_I2C_POWER) {
+	if (data->buffer[0] & MPR_ST_ERR_FLAG) {
 		dev_err(data->dev,
 			"unexpected status byte %02x\n", data->buffer[0]);
 		return -ETIMEDOUT;
 	}
+
+	*press = get_unaligned_be24(&data->buffer[1]);
+
+	dev_dbg(dev, "received: %*ph cnt: %d\n", ret, data->buffer, *press);
 
 	return 0;
 }
@@ -258,22 +270,20 @@ static irqreturn_t mpr_eoc_handler(int irq, void *p)
 static irqreturn_t mpr_trigger_handler(int irq, void *p)
 {
 	int ret;
-	u32 recvd;
 	struct iio_poll_func *pf = p;
 	struct iio_dev *indio_dev = pf->indio_dev;
 	struct mpr_data *data = iio_priv(indio_dev);
 
-	guard(mutex)(&data->lock);
-	ret = mpr_read_conversion(data);
+	mutex_lock(&data->lock);
+	ret = mpr_read_pressure(data, &data->chan.pres);
 	if (ret < 0)
 		goto err;
 
-	recvd = get_unaligned_be32(data->buffer);
-	data->chan.pres = FIELD_GET(MPR_PRESSURE_MASK, recvd);
 	iio_push_to_buffers_with_timestamp(indio_dev, &data->chan,
 					   iio_get_time_ns(indio_dev));
 
 err:
+	mutex_unlock(&data->lock);
 	iio_trigger_notify_done(indio_dev->trig);
 
 	return IRQ_HANDLED;
@@ -283,28 +293,28 @@ static int mpr_read_raw(struct iio_dev *indio_dev,
 	struct iio_chan_spec const *chan, int *val, int *val2, long mask)
 {
 	int ret;
+	s32 pressure;
 	struct mpr_data *data = iio_priv(indio_dev);
-	u32 recvd;
 
 	if (chan->type != IIO_PRESSURE)
 		return -EINVAL;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		ret = mpr_read_conversion(data);
+		mutex_lock(&data->lock);
+		ret = mpr_read_pressure(data, &pressure);
+		mutex_unlock(&data->lock);
 		if (ret < 0)
 			return ret;
-
-		recvd = get_unaligned_be32(data->buffer);
-		*val = FIELD_GET(MPR_PRESSURE_MASK, recvd);
+		*val = pressure;
 		return IIO_VAL_INT;
 	case IIO_CHAN_INFO_SCALE:
 		*val = data->scale;
-		*val2 = data->scale_dec;
+		*val2 = data->scale2;
 		return IIO_VAL_INT_PLUS_NANO;
 	case IIO_CHAN_INFO_OFFSET:
 		*val = data->offset;
-		*val2 = data->offset_dec;
+		*val2 = data->offset2;
 		return IIO_VAL_INT_PLUS_NANO;
 	default:
 		return -EINVAL;
@@ -341,6 +351,11 @@ int mpr_common_probe(struct device *dev, const struct mpr_ops *ops, int irq)
 	indio_dev->channels = mpr_channels;
 	indio_dev->num_channels = ARRAY_SIZE(mpr_channels);
 	indio_dev->modes = INDIO_DIRECT_MODE;
+
+	ret = devm_regulator_get_enable(dev, "vdd");
+	if (ret)
+		return dev_err_probe(dev, ret,
+				"can't get and enable vdd supply\n");
 
 	ret = data->ops->init(data->dev);
 	if (ret)
@@ -388,20 +403,20 @@ int mpr_common_probe(struct device *dev, const struct mpr_ops *ops, int irq)
 		return dev_err_probe(dev, -EINVAL,
 				     "pressure limits are invalid\n");
 
-	ret = devm_regulator_get_enable(dev, "vdd");
-	if (ret)
-		return dev_err_probe(dev, ret, "can't get vdd supply\n");
-
 	data->outmin = mpr_func_spec[data->function].output_min;
 	data->outmax = mpr_func_spec[data->function].output_max;
 
 	/* use 64 bit calculation for preserving a reasonable precision */
 	scale = div_s64(((s64)(data->pmax - data->pmin)) * NANO,
 			data->outmax - data->outmin);
-	data->scale = div_s64_rem(scale, NANO, &data->scale_dec);
+	data->scale = div_s64_rem(scale, NANO, &data->scale2);
+	/*
+	 * multiply with NANO before dividing by scale and later divide by NANO
+	 * again.
+	 */
 	offset = ((-1LL) * (s64)data->outmin) * NANO -
 		 div_s64(div_s64((s64)data->pmin * NANO, scale), NANO);
-	data->offset = div_s64_rem(offset, NANO, &data->offset_dec);
+	data->offset = div_s64_rem(offset, NANO, &data->offset2);
 
 	if (data->irq > 0) {
 		ret = devm_request_irq(dev, data->irq, mpr_eoc_handler,
