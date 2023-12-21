@@ -8,5 +8,6 @@ Wh	CS	1	P9_17	WOr
 Ye	MOSI	2	P9_18	WGr
 Br	MISO	7	P9_21	WBl
 Gr	CLK	3	P9_22	Gr
+        reset		P9_12
 unused				Or
 

@@ -50,16 +50,6 @@ properties:
       If not present the device is not reset during the probe.
     maxItems: 1
 
-  honeywell,pmin-pascal:
-    description:
-      Minimum pressure value the sensor can measure in pascal.
-      To be specified only if honeywell,pressure-triplet is set to "NA".
-
-  honeywell,pmax-pascal:
-    description:
-      Maximum pressure value the sensor can measure in pascal.
-      To be specified only if honeywell,pressure-triplet is set to "NA".
-
   honeywell,transfer-function:
     description: |
       Transfer function which defines the range of valid values delivered by
@@ -78,9 +68,18 @@ properties:
     enum: [0001BA, 01.6BA, 02.5BA, 0060MG, 0100MG, 0160MG, 0250MG, 0400MG,
            0600MG, 0001BG, 01.6BG, 02.5BG, 0100KA, 0160KA, 0250KA, 0006KG,
            0010KG, 0016KG, 0025KG, 0040KG, 0060KG, 0100KG, 0160KG, 0250KG,
-           0015PA, 0025PA, 0030PA, 0001PG, 0005PG, 0015PG, 0030PG, 0300YG,
-           NA]
+           0015PA, 0025PA, 0030PA, 0001PG, 0005PG, 0015PG, 0030PG, 0300YG]
     $ref: /schemas/types.yaml#/definitions/string
+
+  honeywell,pmin-pascal:
+    description:
+      Minimum pressure value the sensor can measure in pascal.
+      To be specified only if honeywell,pressure-triplet is not set.
+
+  honeywell,pmax-pascal:
+    description:
+      Maximum pressure value the sensor can measure in pascal.
+      To be specified only if honeywell,pressure-triplet is not set.
 
   spi-max-frequency:
     maximum: 800000
@@ -91,20 +90,9 @@ properties:
 required:
   - compatible
   - reg
-  - honeywell,pressure-triplet
   - honeywell,transfer-function
 
 additionalProperties: false
-
-dependentSchemas:
-  honeywell,pmin-pascal:
-    properties:
-      honeywell,pressure-triplet:
-        const: NA
-  honeywell,pmax-pascal:
-    properties:
-      honeywell,pressure-triplet:
-        const: NA
 
 examples:
   - |
