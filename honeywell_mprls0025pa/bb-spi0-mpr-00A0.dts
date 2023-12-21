@@ -60,10 +60,9 @@
 		interrupt-parent = <&gpio0>;
 		interrupts = <30 IRQ_TYPE_EDGE_RISING>;
 
-		// in case of a custom range, use NA as pressure-triplet
+		// in case of a custom range, unset pressure-triplet
 		// and populate pmin-pascal and pmax-pascal
 		// with the range limits converted into pascals
-		//honeywell,pressure-triplet = "NA";
 		//honeywell,pmin-pascal = <0>;
 		//honeywell,pmax-pascal = <206850>;
 

@@ -91,6 +91,14 @@ required:
   - compatible
   - reg
   - honeywell,transfer-function
+  - vdd-supply
+
+oneOf:
+  - required:
+      - honeywell,pmin-pascal
+      - honeywell,pmax-pascal
+  - required:
+      - honeywell,pressure-triplet
 
 additionalProperties: false
 
@@ -129,6 +137,7 @@ examples:
 
             honeywell,pressure-triplet = "0015PA";
             honeywell,transfer-function = <1>;
+            vdd-supply = <&vcc_3v3>;
         };
     };
 ...
