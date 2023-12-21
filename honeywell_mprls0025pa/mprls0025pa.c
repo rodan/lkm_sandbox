@@ -365,7 +365,7 @@ int mpr_common_probe(struct device *dev, const struct mpr_ops *ops, int irq)
 				       "honeywell,transfer-function", &func);
 	if (ret)
 		return dev_err_probe(dev, ret,
-			    "honeywell,transfer-function could not be read\n");
+			     "honeywell,transfer-function could not be read\n");
 	data->function = func - 1;
 	if (data->function > MPR_FUNCTION_C)
 		return dev_err_probe(dev, -EINVAL,
@@ -379,21 +379,21 @@ int mpr_common_probe(struct device *dev, const struct mpr_ops *ops, int irq)
 					       &data->pmin);
 		if (ret)
 			return dev_err_probe(dev, ret,
-				  "honeywell,pmin-pascal could not be read\n");
+				   "honeywell,pmin-pascal could not be read\n");
 
 		ret = device_property_read_u32(dev, "honeywell,pmax-pascal",
 					       &data->pmax);
 		if (ret)
 			return dev_err_probe(dev, ret,
-				  "honeywell,pmax-pascal could not be read\n");
+				   "honeywell,pmax-pascal could not be read\n");
 	} else {
 		ret = device_property_match_property_string(dev,
-						  "honeywell,pressure-triplet",
-						  mpr_triplet_variants,
-						  MPR_VARIANTS_MAX);
+						   "honeywell,pressure-triplet",
+						   mpr_triplet_variants,
+						   MPR_VARIANTS_MAX);
 		if (ret < 0)
 			return dev_err_probe(dev, -EINVAL,
-				    "honeywell,pressure-triplet is invalid\n");
+				     "honeywell,pressure-triplet is invalid\n");
 
 		data->pmin = mpr_range_config[ret].pmin;
 		data->pmax = mpr_range_config[ret].pmax;
@@ -430,7 +430,7 @@ int mpr_common_probe(struct device *dev, const struct mpr_ops *ops, int irq)
 						    GPIOD_OUT_HIGH);
 	if (IS_ERR(data->gpiod_reset))
 		return dev_err_probe(dev, PTR_ERR(data->gpiod_reset),
-						"request reset-gpio failed\n");
+						 "request reset-gpio failed\n");
 
 	mpr_reset(data);
 

@@ -52,8 +52,8 @@ properties:
 
   honeywell,transfer-function:
     description: |
-      Transfer function which defines the range of valid values delivered by
-      the sensor.
+      Transfer function which defines the range of valid values delivered by the
+      sensor.
       1 - A, 10% to 90% of 2^24 (1677722 .. 15099494)
       2 - B, 2.5% to 22.5% of 2^24 (419430 .. 3774874)
       3 - C, 20% to 80% of 2^24 (3355443 .. 13421773)
@@ -64,7 +64,7 @@ properties:
     description: |
       Case-sensitive five character string that defines pressure range, unit
       and type as part of the device nomenclature. In the unlikely case of a
-      custom chip, set to "NA" and provide pmin-pascal and pmax-pascal.
+      custom chip, unset and provide pmin-pascal and pmax-pascal instead.
     enum: [0001BA, 01.6BA, 02.5BA, 0060MG, 0100MG, 0160MG, 0250MG, 0400MG,
            0600MG, 0001BG, 01.6BG, 02.5BG, 0100KA, 0160KA, 0250KA, 0006KG,
            0010KG, 0016KG, 0025KG, 0040KG, 0060KG, 0100KG, 0160KG, 0250KG,

@@ -86,7 +86,7 @@ struct mpr_data {
 	int			irq;
 	struct completion	completion;
 	struct mpr_chan		chan;
-	u8	buffer[MPR_MEASUREMENT_RD_SIZE] __aligned(IIO_DMA_MINALIGN);
+	u8	    buffer[MPR_MEASUREMENT_RD_SIZE] __aligned(IIO_DMA_MINALIGN);
 };
 
 struct mpr_ops {
