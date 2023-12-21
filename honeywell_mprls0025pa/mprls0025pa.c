@@ -232,7 +232,7 @@ static int mpr_read_pressure(struct mpr_data *data, s32 *press)
 					ret);
 				return ret;
 			}
-			if ((data->buffer[0] & MPR_ST_ERR_FLAG) == 0)
+			if (!(data->buffer[0] & MPR_ST_ERR_FLAG))
 				break;
 		}
 		if (i == nloops) {
