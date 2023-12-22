@@ -415,22 +415,22 @@ int mpr_common_probe(struct device *dev, const struct mpr_ops *ops, int irq)
 	 * again.
 	 */
 	offset = ((-1LL) * (s64)data->outmin) * NANO -
-		 div_s64(div_s64((s64)data->pmin * NANO, scale), NANO);
+		  div_s64(div_s64((s64)data->pmin * NANO, scale), NANO);
 	data->offset = div_s64_rem(offset, NANO, &data->offset2);
 
 	if (data->irq > 0) {
 		ret = devm_request_irq(dev, data->irq, mpr_eoc_handler,
-				IRQF_TRIGGER_RISING, dev_name(dev), data);
+				      IRQF_TRIGGER_RISING, dev_name(dev), data);
 		if (ret)
 			return dev_err_probe(dev, ret,
-				"request irq %d failed\n", data->irq);
+					  "request irq %d failed\n", data->irq);
 	}
 
 	data->gpiod_reset = devm_gpiod_get_optional(dev, "reset",
 						    GPIOD_OUT_HIGH);
 	if (IS_ERR(data->gpiod_reset))
 		return dev_err_probe(dev, PTR_ERR(data->gpiod_reset),
-						 "request reset-gpio failed\n");
+				     "request reset-gpio failed\n");
 
 	mpr_reset(data);
 

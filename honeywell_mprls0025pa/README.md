@@ -43,16 +43,16 @@ The transfer function limits define the raw output of the sensor at a given pres
 
 ```TRANSFER_FUNCTION_ID``` | nomenclature | info
 --- | --- | ---
-0 | A | 10% to 90% of 2^24 counts
-1 | B | 2.5% to 22.5% of 2^24 counts
-2 | C | 20% to 80% of 2^24 counts
+1 | A | 10% to 90% of 2^24 counts
+2 | B | 2.5% to 22.5% of 2^24 counts
+3 | C | 20% to 80% of 2^24 counts
 
 
-```VARIANT``` defines the pressure range as specified in the sensor's name and is one of: 0001BA, 01.6BA, 02.5BA, 0060MG, 0100MG, 0160MG, 0250MG, 0400MG, 0600MG, 0001BG, 01.6BG, 02.5BG, 0100KA, 0160KA, 0250KA, 0006KG, 0010KG, 0016KG, 0025KG, 0040KG, 0060KG, 0100KG, 0160KG, 0250KG, 0015PA, 0025PA, 0030PA, 0001PG, 0005PG, 0015PG, 0030PG, 0300YG, NA
+```VARIANT``` defines the pressure range as specified in the sensor's name and is one of: 0001BA, 01.6BA, 02.5BA, 0060MG, 0100MG, 0160MG, 0250MG, 0400MG, 0600MG, 0001BG, 01.6BG, 02.5BG, 0100KA, 0160KA, 0250KA, 0006KG, 0010KG, 0016KG, 0025KG, 0040KG, 0060KG, 0100KG, 0160KG, 0250KG, 0015PA, 0025PA, 0030PA, 0001PG, 0005PG, 0015PG, 0030PG, 0300YG
 
 please consult the chip nomenclature in the datasheet.
 
-in case it's a custom chip with a different measurement range, then set ```NA``` (Not Available) as VARIANT and provide the limits:
+in case it's a custom chip with a different measurement range, unset honeywell,pressure-triplet and provide the limits:
 
 ```
         pressure@ADDR {
@@ -60,7 +60,6 @@ in case it's a custom chip with a different measurement range, then set ```NA```
                 compatible = "honeywell,mprls0025pa";
                 reg = <ADDR>;
                 honeywell,transfer-function = <TRANSFER_FUNCTION_ID>;
-                honeywell,pressure-triplet = "NA";
                 honeywell,pmin-pascal = <0>;
                 honeywell,pmax-pascal = <206850>;
         };
