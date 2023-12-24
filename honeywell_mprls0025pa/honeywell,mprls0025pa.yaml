@@ -8,25 +8,28 @@ title: Honeywell mprls0025pa pressure sensor
 
 maintainers:
   - Andreas Klinger <ak@it-klinger.de>
+  - Petre Rodan <petre.rodan@subdimension.ro>
 
 description: |
   Honeywell pressure sensor of model mprls0025pa.
 
-  This sensor has an I2C and SPI interface. Only the I2C interface is
-  implemented.
+  This sensor has an I2C and SPI interface. Both are supported.
 
   There are many models with different pressure ranges available. The vendor
   calls them "mpr series". All of them have the identical programming model and
   differ in the pressure range, unit and transfer function.
 
-  To support different models one need to specify the pressure range as well as
-  the transfer function. Pressure range needs to be converted from its unit to
+  To support different models one need to specify its pressure triplet as well
+  as the transfer function.
+
+  For custom models the pressure values can alternatively be specified manually.
+  The minimal range value stands for the minimum pressure and the maximum value
+  also for the maximum pressure with linear relation inside the range.
+  Pressure range needs to be converted from the datasheet specified unit to
   pascal.
 
   The transfer function defines the ranges of numerical values delivered by the
-  sensor. The minimal range value stands for the minimum pressure and the
-  maximum value also for the maximum pressure with linear relation inside the
-  range.
+  sensor.
 
   Specifications about the devices can be found at:
     https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/siot/en-us/
@@ -42,6 +45,10 @@ properties:
     maxItems: 1
 
   interrupts:
+    description:
+      Optional interrupt for indicating End-of-conversion.
+      If not present, the driver loops for a while until the received status
+      byte indicates correct measurement.
     maxItems: 1
 
   reset-gpios:
@@ -99,6 +106,15 @@ oneOf:
       - honeywell,pmax-pascal
   - required:
       - honeywell,pressure-triplet
+
+allOf:
+  - if:
+      required:
+        - honeywell,pressure-triplet
+    then:
+      properties:
+        honeywell,pmin-pascal: false
+        honeywell,pmax-pascal: false
 
 additionalProperties: false
 
