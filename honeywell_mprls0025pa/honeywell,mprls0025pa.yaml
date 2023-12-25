@@ -13,7 +13,7 @@ maintainers:
 description: |
   Honeywell pressure sensor of model mprls0025pa.
 
-  This sensor has an I2C and SPI interface. Both are supported.
+  This sensor has an I2C and SPI interface.
 
   There are many models with different pressure ranges available. The vendor
   calls them "mpr series". All of them have the identical programming model and
@@ -108,6 +108,7 @@ oneOf:
       - honeywell,pressure-triplet
 
 allOf:
+  - $ref: /schemas/spi/spi-peripheral-props.yaml
   - if:
       required:
         - honeywell,pressure-triplet
