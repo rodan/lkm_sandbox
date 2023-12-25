@@ -31,6 +31,7 @@
 		//honeywell,pmin-pascal = <(-4000000)>;
 		//honeywell,pmax-pascal = <200000>;
 
+		vdd-supply = <&ldo4_reg>;
 		status = "okay";
 	};
 };

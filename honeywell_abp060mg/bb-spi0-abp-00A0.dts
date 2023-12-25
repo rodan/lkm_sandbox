@@ -11,7 +11,7 @@
  */
 &{/chosen} {
 	overlays {
-		bb-spi0-hsc-00A0.kernel = __TIMESTAMP__;
+		bb-spi0-abp-00A0.kernel = __TIMESTAMP__;
 	};
 };
 
@@ -19,7 +19,6 @@
  * Free up the pins used by the cape from the pinmux helpers.
  */
 &ocp {
-	P9_11_pinmux { status = "disabled"; };	/* P9_11 honeywell chip CS pin */
 	P9_17_pinmux { status = "disabled"; };	/* P9_17 (A16) spi0_cs0.spi0_cs0 */
 	P9_21_pinmux { status = "disabled"; };	/* P9_21 (B17) spi0_d0.spi0_d0 */
 	P9_22_pinmux { status = "disabled"; };	/* P9_22 (A17) spi0_sclk.spi0_sclk */
@@ -43,28 +42,11 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi0_pins>;
 
-/*
-	channel@0{
-		status = "disabled";
-		reg = <0>;
-	};
-*/
-
 	pressure@0{
-		compatible = "honeywell,hsc030pa";
+		compatible = "honeywell,ABP030PG";
 		reg = <0>;
 		spi-max-frequency = <800000>;
-
 		honeywell,transfer-function = <0>;
-		honeywell,pressure-triplet = "100PA";
-
-		// in case of a custom range, use NA as pressure-triplet
-		// and populate pmin-pascal and pmax-pascal
-		// with the range limits converted into pascals
-		//honeywell,pressure-triplet = "NA";
-		//honeywell,pmin-pascal = <0>;
-		//honeywell,pmax-pascal = <206850>;
-
 		vdd-supply = <&ldo4_reg>;
 		status = "okay";
 	};

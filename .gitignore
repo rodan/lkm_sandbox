@@ -4,6 +4,7 @@
 .*.o.d
 *.mod
 *.mod.*
+*.dtbo
 modules.order
 *.swp
 *~
