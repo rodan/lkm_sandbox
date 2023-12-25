@@ -3,9 +3,9 @@
 
 available drivers | subsystem | specs | tree version | status
 --- | --- | --- | --- | ---
-[Honeywell ABP series](honeywell_abp060mg) | iio | [datasheet 1](https://github.com/rodan/lkm_sandbox/blob/main/honeywell_abp060mg/basic-abp-series.pdf) | 6.7.0-rc6 | under development
-[Honeywell HSC/SSC series](honeywell_hsc030pa) | iio | [datasheet 1](https://github.com/rodan/lkm_sandbox/blob/main/honeywell_hsc030pa/trustability-hsc-series.pdf) [2](https://github.com/rodan/lkm_sandbox/blob/main/honeywell_hsc030pa/trustability-ssc-series.pdf) | patched 6.7.0-rc6 | accepted upstream, probably part of 6.8
-[Honeywell MPR series](honeywell_mprls0025pa) | iio | [datasheet](https://github.com/rodan/lkm_sandbox/blob/main/honeywell_mprls0025pa/micropressure-mpr-series.pdf)  | patched 6.7.0-rc6 | sent for upstream review
+[Honeywell ABP series](honeywell_abp060mg) | iio | [datasheet 1](https://github.com/rodan/lkm_sandbox/blob/main/datasheet/basic-abp-series.pdf) | 6.7.0-rc6 | under development
+[Honeywell HSC/SSC series](honeywell_hsc030pa) | iio | [datasheet 1](https://github.com/rodan/lkm_sandbox/blob/main/datasheet/trustability-hsc-series.pdf) [2](https://github.com/rodan/lkm_sandbox/blob/main/datasheet/trustability-ssc-series.pdf) | patched 6.7.0-rc6 | accepted upstream, probably part of 6.8
+[Honeywell MPR series](honeywell_mprls0025pa) | iio | [datasheet](https://github.com/rodan/lkm_sandbox/blob/main/datasheet/micropressure-mpr-series.pdf)  | patched 6.7.0-rc6 | sent for upstream review
 
 ### compilation
 
