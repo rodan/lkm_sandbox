@@ -13,8 +13,6 @@
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
 
-#include <linux/iio/iio.h>
-
 #include "mprls0025pa.h"
 
 static int mpr_i2c_init(struct device *unused)
@@ -32,9 +30,10 @@ static int mpr_i2c_read(struct mpr_data *data, const u8 unused, const u8 cnt)
 
 	memset(data->buffer, 0, MPR_MEASUREMENT_RD_SIZE);
 	ret = i2c_master_recv(client, data->buffer, cnt);
-	if (ret != cnt) {
+	if (ret < 0)
+		return ret;
+	else if (ret != cnt)
 		return -EIO;
-	}
 
 	return 0;
 }
@@ -49,9 +48,10 @@ static int mpr_i2c_write(struct mpr_data *data, const u8 cmd, const u8 unused)
 	wdata[0] = cmd;
 
 	ret = i2c_master_send(client, wdata, MPR_PKT_SYNC_LEN);
-	if (ret != MPR_PKT_SYNC_LEN) {
+	if (ret < 0)
+		return ret;
+	else if (ret != MPR_PKT_SYNC_LEN)
 		return -EIO;
-	}
 
 	return 0;
 }

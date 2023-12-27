@@ -22,11 +22,11 @@ description: |
   To support different models one need to specify its pressure triplet as well
   as the transfer function.
 
-  For custom models the pressure values can alternatively be specified manually.
+  For custom silicon chips not covered by the Honeywell MPR series datasheet,
+  the pressure values can be specified manually via honeywell,pmin-pascal and
+  honeywell,pmax-pascal.
   The minimal range value stands for the minimum pressure and the maximum value
   also for the maximum pressure with linear relation inside the range.
-  Pressure range needs to be converted from the datasheet specified unit to
-  pascal.
 
   The transfer function defines the ranges of numerical values delivered by the
   sensor.
@@ -81,12 +81,10 @@ properties:
   honeywell,pmin-pascal:
     description:
       Minimum pressure value the sensor can measure in pascal.
-      To be specified only if honeywell,pressure-triplet is not set.
 
   honeywell,pmax-pascal:
     description:
       Maximum pressure value the sensor can measure in pascal.
-      To be specified only if honeywell,pressure-triplet is not set.
 
   spi-max-frequency:
     maximum: 800000
@@ -102,10 +100,10 @@ required:
 
 oneOf:
   - required:
+      - honeywell,pressure-triplet
+  - required:
       - honeywell,pmin-pascal
       - honeywell,pmax-pascal
-  - required:
-      - honeywell,pressure-triplet
 
 allOf:
   - $ref: /schemas/spi/spi-peripheral-props.yaml
