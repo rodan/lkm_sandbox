@@ -354,7 +354,7 @@ int mpr_common_probe(struct device *dev, const struct mpr_ops *ops, int irq)
 	ret = devm_regulator_get_enable(dev, "vdd");
 	if (ret)
 		return dev_err_probe(dev, ret,
-				"can't get and enable vdd supply\n");
+				     "can't get and enable vdd supply\n");
 
 	ret = data->ops->init(data->dev);
 	if (ret)
@@ -419,7 +419,9 @@ int mpr_common_probe(struct device *dev, const struct mpr_ops *ops, int irq)
 
 	if (data->irq > 0) {
 		ret = devm_request_irq(dev, data->irq, mpr_eoc_handler,
-				      IRQF_TRIGGER_RISING, dev_name(dev), data);
+				       IRQF_TRIGGER_RISING,
+				       dev_name(dev),
+				       data);
 		if (ret)
 			return dev_err_probe(dev, ret,
 					  "request irq %d failed\n", data->irq);

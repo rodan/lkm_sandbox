@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * MPRLS0025PA - Honeywell MicroPressure pressure sensor series driver
  *
