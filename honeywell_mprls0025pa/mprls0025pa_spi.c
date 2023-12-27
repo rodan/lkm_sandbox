@@ -13,8 +13,6 @@
 #include <linux/spi/spi.h>
 #include <linux/stddef.h>
 
-#include <linux/iio/iio.h>
-
 #include "mprls0025pa.h"
 
 struct mpr_spi_buf {

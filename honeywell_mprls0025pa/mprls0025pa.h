@@ -18,6 +18,8 @@
 #include <linux/stddef.h>
 #include <linux/types.h>
 
+#include <linux/iio/iio.h>
+
 #define MPR_MEASUREMENT_RD_SIZE 4
 #define MPR_CMD_NOP      0xf0
 #define MPR_CMD_SYNC     0xaa

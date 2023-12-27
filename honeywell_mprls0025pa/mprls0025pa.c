@@ -21,7 +21,6 @@
 #include <linux/gpio/consumer.h>
 
 #include <linux/iio/buffer.h>
-#include <linux/iio/iio.h>
 #include <linux/iio/trigger_consumer.h>
 #include <linux/iio/triggered_buffer.h>
 
