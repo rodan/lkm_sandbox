@@ -92,9 +92,9 @@ struct mpr_data {
 };
 
 struct mpr_ops {
-	int (*init)(struct device *);
-	int (*read)(struct mpr_data *, const u8, const u8);
-	int (*write)(struct mpr_data *, const u8, const u8);
+	int (*init)(struct device *dev);
+	int (*read)(struct mpr_data *data, const u8 cmd, const u8 cnt);
+	int (*write)(struct mpr_data *data, const u8 cmd, const u8 cnt);
 };
 
 int mpr_common_probe(struct device *dev, const struct mpr_ops *ops, int irq);
