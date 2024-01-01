@@ -1,34 +1,31 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Copyright (C) 2016 - Marcin Malagowski <mrc@bourne.st>
+ * Copyright (C) 2024 - Petre Rodan <petre.rodan@subdimension.ro>
  */
+
+#include <linux/array_size.h>
+#include <linux/bitfield.h>
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/i2c.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
+#include <linux/math64.h>
 #include <linux/module.h>
-#include <linux/iio/iio.h>
+#include <linux/property.h>
+#include <linux/units.h>
+
+#include "abp060mg.h"
+#define ABP_ERROR_MASK        GENMASK(7, 6)
+#define ABP_TEMPERATURE_MASK  GENMASK(15, 5)
+#define ABP_PRESSURE_MASK     GENMASK(29, 16)
 
 #define ABP060MG_ERROR_MASK   0xC000
-#define ABP060MG_RESP_TIME_MS 40
 #define ABP060MG_MIN_COUNTS   1638  /* = 0x0666 (10% of u14) */
-#define ABP060MG_MAX_COUNTS   14745 /* = 0x3999 (90% of u14) */
+#define ABP060MG_MAX_COUNTS   14746 /* = 0x399a (90% of u14) */
 #define ABP060MG_NUM_COUNTS   (ABP060MG_MAX_COUNTS - ABP060MG_MIN_COUNTS)
-
-enum abp_variant {
-	/* gage [kPa] */
-	ABP006KG, ABP010KG, ABP016KG, ABP025KG, ABP040KG, ABP060KG, ABP100KG,
-	ABP160KG, ABP250KG, ABP400KG, ABP600KG, ABP001GG,
-	/* differential [kPa] */
-	ABP006KD, ABP010KD, ABP016KD, ABP025KD, ABP040KD, ABP060KD, ABP100KD,
-	ABP160KD, ABP250KD, ABP400KD,
-	/* gage [psi] */
-	ABP001PG, ABP005PG, ABP015PG, ABP030PG, ABP060PG, ABP100PG, ABP150PG,
-	/* differential [psi] */
-	ABP001PD, ABP005PD, ABP015PD, ABP030PD, ABP060PD,
-};
 
 struct abp_config {
 	int min;
@@ -60,7 +57,7 @@ static struct abp_config abp_config[] = {
 	[ABP250KD] = { .min = -250000, .max =   250000 },
 	[ABP400KD] = { .min = -400000, .max =   400000 },
 	/* psi variants (1 psi ~ 6895 Pa) */
-	[ABP001PG] = { .min =       0, .max =     6985 },
+	[ABP001PG] = { .min =       0, .max =     6895 },
 	[ABP005PG] = { .min =       0, .max =    34474 },
 	[ABP015PG] = { .min =       0, .max =   103421 },
 	[ABP030PG] = { .min =       0, .max =   206843 },
@@ -74,22 +71,14 @@ static struct abp_config abp_config[] = {
 	[ABP060PD] = { .min = -413686, .max =   413686 },
 };
 
-struct abp_state {
-	struct i2c_client *client;
-	struct mutex lock;
-
-	/*
-	 * bus-dependent MEASURE_REQUEST length.
-	 * If no SMBUS_QUICK support, need to send dummy byte
-	 */
-	int mreq_len;
-
-	/* model-dependent values (calculated on probe) */
-	int scale;
-	int offset;
+enum abp_func_id {
+	ABP_FUNCTION_A,
+	ABP_FUNCTION_D,
+	ABP_FUNCTION_S,
+	ABP_FUNCTION_T,
 };
 
-static const struct iio_chan_spec abp060mg_channels[] = {
+static const struct iio_chan_spec abp060mg_p_channel[] = {
 	{
 		.type = IIO_PRESSURE,
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
@@ -97,34 +86,40 @@ static const struct iio_chan_spec abp060mg_channels[] = {
 	},
 };
 
-static int abp060mg_get_measurement(struct abp_state *state, int *val)
+static const struct iio_chan_spec abp060mg_pt_channel[] = {
+	{
+		.type = IIO_PRESSURE,
+		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
+				      BIT(IIO_CHAN_INFO_SCALE) |
+				      BIT(IIO_CHAN_INFO_OFFSET),
+	},
+	{
+		.type = IIO_TEMP,
+		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
+				      BIT(IIO_CHAN_INFO_SCALE) |
+				      BIT(IIO_CHAN_INFO_OFFSET),
+	},
+};
+
+static bool abp060mg_conversion_is_valid(struct abp_state *state)
 {
-	struct i2c_client *client = state->client;
-	__be16 buf[2];
-	u16 pressure;
+	return !(state->buffer[0] & ABP_ERROR_MASK);
+}
+
+static int abp060mg_get_measurement(struct abp_state *state)
+{
+	//const struct hsc_chip_data *chip = data->chip;
 	int ret;
 
-	buf[0] = 0;
-	ret = i2c_master_send(client, (u8 *)&buf, state->mreq_len);
+	ret = state->recv_cb(state);
 	if (ret < 0)
 		return ret;
 
-	msleep_interruptible(ABP060MG_RESP_TIME_MS);
+	state->is_valid = abp060mg_conversion_is_valid(state);
+	if (!state->is_valid)
+		return -EAGAIN;
 
-	ret = i2c_master_recv(client, (u8 *)&buf, sizeof(buf));
-	if (ret < 0)
-		return ret;
-
-	pressure = be16_to_cpu(buf[0]);
-	if (pressure & ABP060MG_ERROR_MASK)
-		return -EIO;
-
-	if (pressure < ABP060MG_MIN_COUNTS || pressure > ABP060MG_MAX_COUNTS)
-		return -EIO;
-
-	*val = pressure;
-
-	return IIO_VAL_INT;
+	return 0;
 }
 
 static int abp060mg_read_raw(struct iio_dev *indio_dev,
@@ -133,28 +128,58 @@ static int abp060mg_read_raw(struct iio_dev *indio_dev,
 {
 	struct abp_state *state = iio_priv(indio_dev);
 	int ret;
-
-	mutex_lock(&state->lock);
+	u32 recvd;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		ret = abp060mg_get_measurement(state, val);
-		break;
+		ret = abp060mg_get_measurement(state);
+		if (ret)
+			return ret;
+
+		recvd = get_unaligned_be32(state->buffer);
+		switch (chan->type) {
+		case IIO_PRESSURE:
+			*val = FIELD_GET(ABP_PRESSURE_MASK, recvd);
+			return IIO_VAL_INT;
+		case IIO_TEMP:
+			*val = FIELD_GET(ABP_TEMPERATURE_MASK, recvd);
+			return IIO_VAL_INT;
+		default:
+			return -EINVAL;
+		}
 	case IIO_CHAN_INFO_OFFSET:
-		*val = state->offset;
-		ret = IIO_VAL_INT;
+		switch (chan->type) {
+		case IIO_TEMP:
+			*val = -50000000;
+			*val2 = 97704;
+			return IIO_VAL_FRACTIONAL;
+		case IIO_PRESSURE:
+			*val = state->p_offset;
+			*val2 = state->p_offset_dec;
+			return IIO_VAL_INT_PLUS_MICRO;
+		default:
+			return -EINVAL;
+		}
 		break;
 	case IIO_CHAN_INFO_SCALE:
-		*val = state->scale;
-		*val2 = ABP060MG_NUM_COUNTS * 1000; /* to kPa */
-		ret = IIO_VAL_FRACTIONAL;
+		switch (chan->type) {
+		case IIO_TEMP:
+			*val = 97;
+			*val2 = 703957;
+			return IIO_VAL_INT_PLUS_MICRO;
+		case IIO_PRESSURE:
+			*val = state->p_scale;
+			*val2 = ABP060MG_NUM_COUNTS * 1000; /* to kPa */
+			return IIO_VAL_FRACTIONAL;
+		default:
+			return -EINVAL;
+		}
 		break;
 	default:
 		ret = -EINVAL;
 		break;
 	}
 
-	mutex_unlock(&state->lock);
 	return ret;
 }
 
@@ -162,103 +187,101 @@ static const struct iio_info abp060mg_info = {
 	.read_raw = abp060mg_read_raw,
 };
 
+static bool abp060mg_sensor_has_temp(const u32 transfer_function)
+{
+	switch (transfer_function) {
+	case ABP_FUNCTION_D:
+	case ABP_FUNCTION_T:
+		return true;
+	default:
+		return false;
+	};
+}
+
+static bool abp060mg_sensor_has_sleep_mode(const u32 transfer_function)
+{
+	switch (transfer_function) {
+	case ABP_FUNCTION_D:
+	case ABP_FUNCTION_S:
+		return true;
+	default:
+		return false;
+	};
+}
+
 static void abp060mg_init_device(struct iio_dev *indio_dev, unsigned long id)
 {
 	struct abp_state *state = iio_priv(indio_dev);
 	struct abp_config *cfg = &abp_config[id];
+	s64 tmp;
 
-	state->scale = cfg->max - cfg->min;
-	state->offset = -ABP060MG_MIN_COUNTS;
+	state->p_scale = cfg->max - cfg->min;
+	state->pmin = cfg->min;
+	state->pmax = cfg->max;
+	state->outmin = ABP060MG_MIN_COUNTS;
+	state->outmax = ABP060MG_MAX_COUNTS;
 
-	if (cfg->min < 0) /* differential */
-		state->offset -= ABP060MG_NUM_COUNTS >> 1;
+	tmp = div_s64(((s64)state->pmin * (s64)(state->outmax - state->outmin)) * MICRO,
+		      state->pmax - state->pmin);
+	tmp -= (s64)state->outmin * MICRO;
+	state->p_offset = div_s64_rem(tmp, MICRO, &state->p_offset_dec);
 }
 
-static int abp060mg_probe(struct i2c_client *client)
+int abp060mg_common_probe(struct device *dev, abp_recv_fn recv, const u32 cfg_id,
+		     const u32 flags)
 {
-	const struct i2c_device_id *id = i2c_client_get_device_id(client);
 	struct iio_dev *indio_dev;
 	struct abp_state *state;
-	unsigned long cfg_id = id->driver_data;
+	int ret;
 
-	indio_dev = devm_iio_device_alloc(&client->dev, sizeof(*state));
+	indio_dev = devm_iio_device_alloc(dev, sizeof(*state));
 	if (!indio_dev)
 		return -ENOMEM;
 
 	state = iio_priv(indio_dev);
-	i2c_set_clientdata(client, state);
-	state->client = client;
 
-	if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_QUICK))
+	state->recv_cb = recv;
+	state->dev = dev;
+
+	if (flags & ABP_FLAG_MREQ)
 		state->mreq_len = 1;
 
 	abp060mg_init_device(indio_dev, cfg_id);
 
-	indio_dev->name = dev_name(&client->dev);
+	ret = device_property_read_u32(dev, "honeywell,transfer-function",
+				       &state->function);
+	if (ret)
+		return dev_err_probe(dev, ret,
+			    "honeywell,transfer-function could not be read\n");
+	if (state->function > ABP_FUNCTION_T)
+		return dev_err_probe(dev, -EINVAL,
+				     "honeywell,transfer-function %d invalid\n",
+				     state->function);
+
+	device_property_read_u32(dev, "honeywell,pmin-pascal", &state->pmin);
+	device_property_read_u32(dev, "honeywell,pmax-pascal", &state->pmax);
+
+	if (state->pmin >= state->pmax)
+		return dev_err_probe(dev, -EINVAL,
+				     "pressure limits are invalid\n");
+
+	indio_dev->name = dev_name(dev);
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->info = &abp060mg_info;
 
-	indio_dev->channels = abp060mg_channels;
-	indio_dev->num_channels = ARRAY_SIZE(abp060mg_channels);
+	if (abp060mg_sensor_has_temp(state->function)) {
+		indio_dev->channels = abp060mg_pt_channel;
+		indio_dev->num_channels = ARRAY_SIZE(abp060mg_pt_channel);
+		state->read_len = 4;
+	} else {
+		indio_dev->channels = abp060mg_p_channel;
+		indio_dev->num_channels = ARRAY_SIZE(abp060mg_p_channel);
+		state->read_len = 2;
+	}
 
-	mutex_init(&state->lock);
-
-	return devm_iio_device_register(&client->dev, indio_dev);
+	return devm_iio_device_register(dev, indio_dev);
 }
-
-static const struct i2c_device_id abp060mg_id_table[] = {
-	/* mbar & kPa variants (abp060m [60 mbar] == abp006k [6 kPa]) */
-	/*    gage: */
-	{ "abp060mg", ABP006KG }, { "abp006kg", ABP006KG },
-	{ "abp100mg", ABP010KG }, { "abp010kg", ABP010KG },
-	{ "abp160mg", ABP016KG }, { "abp016kg", ABP016KG },
-	{ "abp250mg", ABP025KG }, { "abp025kg", ABP025KG },
-	{ "abp400mg", ABP040KG }, { "abp040kg", ABP040KG },
-	{ "abp600mg", ABP060KG }, { "abp060kg", ABP060KG },
-	{ "abp001bg", ABP100KG }, { "abp100kg", ABP100KG },
-	{ "abp1_6bg", ABP160KG }, { "abp160kg", ABP160KG },
-	{ "abp2_5bg", ABP250KG }, { "abp250kg", ABP250KG },
-	{ "abp004bg", ABP400KG }, { "abp400kg", ABP400KG },
-	{ "abp006bg", ABP600KG }, { "abp600kg", ABP600KG },
-	{ "abp010bg", ABP001GG }, { "abp001gg", ABP001GG },
-	/*    differential: */
-	{ "abp060md", ABP006KD }, { "abp006kd", ABP006KD },
-	{ "abp100md", ABP010KD }, { "abp010kd", ABP010KD },
-	{ "abp160md", ABP016KD }, { "abp016kd", ABP016KD },
-	{ "abp250md", ABP025KD }, { "abp025kd", ABP025KD },
-	{ "abp400md", ABP040KD }, { "abp040kd", ABP040KD },
-	{ "abp600md", ABP060KD }, { "abp060kd", ABP060KD },
-	{ "abp001bd", ABP100KD }, { "abp100kd", ABP100KD },
-	{ "abp1_6bd", ABP160KD }, { "abp160kd", ABP160KD },
-	{ "abp2_5bd", ABP250KD }, { "abp250kd", ABP250KD },
-	{ "abp004bd", ABP400KD }, { "abp400kd", ABP400KD },
-	/* psi variants */
-	/*    gage: */
-	{ "abp001pg", ABP001PG },
-	{ "abp005pg", ABP005PG },
-	{ "abp015pg", ABP015PG },
-	{ "abp030pg", ABP030PG },
-	{ "abp060pg", ABP060PG },
-	{ "abp100pg", ABP100PG },
-	{ "abp150pg", ABP150PG },
-	/*    differential: */
-	{ "abp001pd", ABP001PD },
-	{ "abp005pd", ABP005PD },
-	{ "abp015pd", ABP015PD },
-	{ "abp030pd", ABP030PD },
-	{ "abp060pd", ABP060PD },
-	{ /* empty */ },
-};
-MODULE_DEVICE_TABLE(i2c, abp060mg_id_table);
-
-static struct i2c_driver abp060mg_driver = {
-	.driver = {
-		.name = "abp060mg",
-	},
-	.probe = abp060mg_probe,
-	.id_table = abp060mg_id_table,
-};
-module_i2c_driver(abp060mg_driver);
+EXPORT_SYMBOL_NS(abp060mg_common_probe, IIO_HONEYWELL_ABP060MG);
 
 MODULE_AUTHOR("Marcin Malagowski <mrc@bourne.st>");
 MODULE_DESCRIPTION("Honeywell ABP pressure sensor driver");

@@ -22,10 +22,12 @@ create_dtbo()
 
 mkdir -p "${BUILD_DIR}"
 
-pushd "${LINUX_SRC}/arch/arm/boot/dts/ti/omap/" > /dev/null
-create_devboard_dtb 2>/dev/null
-popd > /dev/null
+#pushd "${LINUX_SRC}/arch/arm/boot/dts/ti/omap/" > /dev/null
+#create_devboard_dtb 2>/dev/null
+#popd > /dev/null
 
 create_dtbo bb-spi0-abp-00A0
+create_dtbo bb-i2c2-abp-00A0
+create_dtbo bb-spi0-abp-00A1
 
 

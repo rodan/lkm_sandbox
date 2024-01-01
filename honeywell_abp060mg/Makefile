@@ -1,5 +1,5 @@
 
-obj-m += abp060mg.o # hsc030pa_i2c.o hsc030pa_spi.o
+obj-m += abp060mg.o abp060mg_i2c.o # abp060mg_spi.o
 KBUILD_CFLAGS += -Wall
 PWD := $(CURDIR)
 LINUX_SRC = /usr/src/linux

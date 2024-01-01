@@ -33,7 +33,7 @@ prettify_hex() {
 
 create_c_file()
 {
-    echo -n "enum ${PREFIX_LC}_variants {"
+    echo -n "enum ${PREFIX_LC}_variant {"
     i=0
     cat "${IN_FILE}" | while read -r line; do
         if [ $((i%4)) == 0 ]; then
@@ -51,18 +51,19 @@ create_c_file()
     echo -e " ${PREFIX}_VARIANTS_MAX"
     echo -e '};\n'
 
-    echo -n "static const char * const ${PREFIX_LC}_triplet_variants[${PREFIX}_VARIANTS_MAX] = {"
+    echo -n "static const struct _device_id abp060mg_id_table[${PREFIX}_VARIANTS_MAX] = {"
     i=0
     cat "${IN_FILE}" | while read -r line; do
-        if [ $((i%3)) == 0 ]; then
+        #if [ $((i%3)) == 0 ]; then
             echo -en "\n\t"
-        else
-            echo -n ' '
-        fi
+        #else
+        #    echo -n ' '
+        #fi
         name=$(echo "${line}" | awk '{ print $1}')
         enum=$(echo "${name}" | sed 's|\.|_|;')
-        echo -en "[${PREFIX}${enum}] = \"${name}\","
-        i=$((i+1))
+        lname=$(echo "${PREFIX}${enum}" | tr '[:upper:]' '[:lower:]')
+        echo -en "[${PREFIX}${enum}] = { \"${lname}\", ${PREFIX}${enum} },"
+        #i=$((i+1))
     done
     echo -e '\n};\n'
 
@@ -120,7 +121,7 @@ EOF
         max=$(printf "%.0f" "${max}")
 
         #echo "${name} ${id} ${min} ${max} ${unit}"
-        echo -e "\t[${PREFIX}${enum}] = { .pmin = ${min}, .pmax = ${max} },"
+        echo -e "\t[${PREFIX}${enum}] = { .min = ${min}, .max = ${max} },"
     done | column -t -R 6,9 | sed 's| \.|.|g;s| = |=|g;s| }|}|;s|^|\t|'
     echo '};'
 }
