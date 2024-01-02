@@ -18,9 +18,11 @@
 #include <linux/units.h>
 
 #include "abp060mg.h"
-#define ABP_ERROR_MASK        GENMASK(7, 6)
+//#define ABP_ERROR_MASK        GENMASK(7, 6)
+#define ABP_ERROR_MASK        GENMASK(7, 7)
 #define ABP_TEMPERATURE_MASK  GENMASK(15, 5)
 #define ABP_PRESSURE_MASK     GENMASK(29, 16)
+#define ABP_BLANKING_NS       (100*MEGA) /* read sensor only once every 100ms */
 
 struct abp_config {
 	int min;
@@ -154,13 +156,16 @@ static int abp060mg_read_raw(struct iio_dev *indio_dev,
 	struct abp_state *state = iio_priv(indio_dev);
 	int ret;
 	u32 recvd;
+	int64_t now = iio_get_time_ns(indio_dev);
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		ret = abp060mg_get_measurement(state);
-		if (ret)
-			return ret;
-
+		if (!state->is_valid || ((now - state->timestamp) > ABP_BLANKING_NS)) {
+			ret = abp060mg_get_measurement(state);
+			if (ret)
+				return ret;
+			state->timestamp = now;
+		}
 		recvd = get_unaligned_be32(state->buffer);
 		switch (chan->type) {
 		case IIO_PRESSURE:
@@ -228,8 +233,8 @@ static void abp060mg_init_attributes(struct abp_state *state)
 	state->p_offset = div_s64_rem(tmp, MICRO, &state->p_offset_dec);
 }
 
-int abp060mg_common_probe(struct device *dev, abp_recv_fn recv, const u32 cfg_id,
-		     const u32 flags)
+int abp060mg_common_probe(struct device *dev, abp_recv_fn recv, const u32 type,
+		     const char *name, const u32 flags)
 {
 	struct iio_dev *indio_dev;
 	struct abp_state *state;
@@ -261,11 +266,11 @@ int abp060mg_common_probe(struct device *dev, abp_recv_fn recv, const u32 cfg_id
 
 	ret = device_property_read_u32(dev, "honeywell,pmin-pascal", &state->pmin);
 	if (ret)
-		state->pmin = abp_config[cfg_id].min;
+		state->pmin = abp_config[type].min;
 
 	ret = device_property_read_u32(dev, "honeywell,pmax-pascal", &state->pmax);
 	if (ret)
-		state->pmax = abp_config[cfg_id].max;
+		state->pmax = abp_config[type].max;
 
 	if (state->pmin >= state->pmax)
 		return dev_err_probe(dev, -EINVAL,
@@ -273,7 +278,7 @@ int abp060mg_common_probe(struct device *dev, abp_recv_fn recv, const u32 cfg_id
 
 	abp060mg_init_attributes(state);
 
-	indio_dev->name = dev_name(dev);
+	indio_dev->name = name ? name: "unknown";
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->info = &abp060mg_info;
 

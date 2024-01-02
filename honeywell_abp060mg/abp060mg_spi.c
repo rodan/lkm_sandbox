@@ -12,11 +12,10 @@
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
 #include <linux/spi/spi.h>
-#include <linux/stddef.h>
 
 #include "abp060mg.h"
 
-#define ABP_FMR_INTERVAL_US  10
+#define ABP_FMR_INTERVAL_US  1000
 
 static int abp060mg_spi_recv(struct abp_state *state)
 {
@@ -26,18 +25,27 @@ static int abp060mg_spi_recv(struct abp_state *state)
 		.rx_buf = state->buffer,
 		.len = state->read_len,
 	};
+	struct spi_transfer dummy_xfer = {
+		.tx_buf = NULL,
+		.rx_buf = NULL,
+		.len = 0,
+	};
+	u16 orig_cs_setup_value = spi->cs_setup.value;
+	u8 orig_cs_setup_unit = spi->cs_setup.unit;
 
 	if (state->func_spec->capabilities & ABP_CAP_SLEEP) {
 		/* send the Full Measurement Request (FMR) command on the CS
 		 * line in order to wake up the sensor as per
 		 * "Sleep Mode for Use with Honeywell Digital Pressure Sensors"
-		 * technical note */
-
-	 	if (spi_get_csgpiod(spi, 0)) {
-			gpiod_set_value(spi_get_csgpiod(spi, 0), 1);
-			udelay(ABP_FMR_INTERVAL_US);
-			gpiod_set_value(spi_get_csgpiod(spi, 0), 0);
-		}
+		 * technical note
+		 * CS must be held asserted for at least 8 us without any clock
+		 * pulses being generated
+		 */
+		spi->cs_setup.value = 8;
+		spi->cs_setup.unit = SPI_DELAY_UNIT_USECS;
+		spi_sync_transfer(spi, &dummy_xfer, 1);
+		spi->cs_setup.value = orig_cs_setup_value;
+		spi->cs_setup.unit = orig_cs_setup_unit;
 		msleep_interruptible(ABP_RESP_TIME_MS);
 	}
 
@@ -46,7 +54,16 @@ static int abp060mg_spi_recv(struct abp_state *state)
 
 static int abp060mg_spi_probe(struct spi_device *spi)
 {
-	return abp060mg_common_probe(&spi->dev, abp060mg_spi_recv, 0, 0);
+	const struct spi_device_id *id = spi_get_device_id(spi);
+	const char *name = NULL;
+	u32 type = 0;
+
+	if (id) {
+		type = id->driver_data;
+		name = id->name;
+	}
+
+	return abp060mg_common_probe(&spi->dev, abp060mg_spi_recv, type, name, 0);
 }
 
 static const struct spi_device_id abp060mg_spi_id_table[] = {

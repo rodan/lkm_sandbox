@@ -23,10 +23,9 @@
 
 		honeywell,transfer-function = <3>;
 
-		// in case of a custom chip, use NA as pressure-triplet
-		// and populate pmin-pascal and pmax-pascal
+		// in case of a custom chip initialize
+		// pmin-pascal and pmax-pascal
 		// with the range limits converted into pascals
-		//honeywell,pressure-triplet = "NA";
 		//honeywell,pmin-pascal = <(-4000000)>;
 		//honeywell,pmax-pascal = <200000>;
 

@@ -55,6 +55,8 @@ static int abp060mg_i2c_probe(struct i2c_client *client)
 {
 	const struct i2c_device_id *id = i2c_client_get_device_id(client);
 	u32 flags = ABP_FLAG_NULL;
+	const char *name = NULL;
+	u32 type = 0;
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
 		return -EOPNOTSUPP;
@@ -62,8 +64,13 @@ static int abp060mg_i2c_probe(struct i2c_client *client)
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_QUICK))
 		flags |= ABP_FLAG_MREQ;
 
+	if (id) {
+		type = id->driver_data;
+		name = id->name;
+	}
+
 	return abp060mg_common_probe(&client->dev, abp060mg_i2c_recv,
-				     id->driver_data, flags);
+				     type, name, flags);
 }
 
 static const struct i2c_device_id abp060mg_i2c_id_table[] = {
@@ -107,7 +114,7 @@ static const struct i2c_device_id abp060mg_i2c_id_table[] = {
 	{ "abp015pd", ABP015PD },
 	{ "abp030pd", ABP030PD },
 	{ "abp060pd", ABP060PD },
-	{ /* empty */ },
+	{}
 };
 MODULE_DEVICE_TABLE(i2c, abp060mg_i2c_id_table);
 

@@ -43,10 +43,10 @@
 	pinctrl-0 = <&spi0_pins>;
 
 	pressure@0{
-		compatible = "honeywell,ABP030PG";
+		compatible = "honeywell,abp030pg";
 		reg = <0>;
 		spi-max-frequency = <800000>;
-		honeywell,transfer-function = <0>;
+		honeywell,transfer-function = <1>;
 		vdd-supply = <&ldo4_reg>;
 		status = "okay";
 	};

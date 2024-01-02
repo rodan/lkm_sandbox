@@ -8,6 +8,7 @@
 #ifndef _ABP060MG_H
 #define _ABP060MG_H
 
+#include <linux/stddef.h>
 #include <linux/types.h>
 
 #include <linux/iio/iio.h>
@@ -76,6 +77,7 @@ struct abp_state {
 	s64 p_scale_dec;
 	s64 p_offset;
 	s32 p_offset_dec;
+	int64_t timestamp;
 	u8 buffer[ABP_REG_MEASUREMENT_RD_SIZE] __aligned(IIO_DMA_MINALIGN);
 };
 
@@ -85,7 +87,7 @@ struct abp_func_spec {
 	u16 capabilities;
 };
 
-int abp060mg_common_probe(struct device *dev, abp_recv_fn recv, const u32 cfg_id,
-			  const u32 flags);
+int abp060mg_common_probe(struct device *dev, abp_recv_fn recv, const u32 type,
+			  const char *name, const u32 flags);
 
 #endif
