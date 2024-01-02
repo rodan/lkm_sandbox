@@ -22,17 +22,12 @@
 #define ABP_TEMPERATURE_MASK  GENMASK(15, 5)
 #define ABP_PRESSURE_MASK     GENMASK(29, 16)
 
-#define ABP060MG_ERROR_MASK   0xC000
-#define ABP060MG_MIN_COUNTS   1638  /* = 0x0666 (10% of u14) */
-#define ABP060MG_MAX_COUNTS   14746 /* = 0x399a (90% of u14) */
-#define ABP060MG_NUM_COUNTS   (ABP060MG_MAX_COUNTS - ABP060MG_MIN_COUNTS)
-
 struct abp_config {
 	int min;
 	int max;
 };
 
-static struct abp_config abp_config[] = {
+static const struct abp_config abp_config[] = {
 	/* mbar & kPa variants */
 	[ABP006KG] = { .min =       0, .max =     6000 },
 	[ABP010KG] = { .min =       0, .max =    10000 },
@@ -75,7 +70,18 @@ enum abp_func_id {
 	ABP_FUNCTION_A,
 	ABP_FUNCTION_D,
 	ABP_FUNCTION_S,
-	ABP_FUNCTION_T,
+	ABP_FUNCTION_T
+};
+
+static const struct abp_func_spec abp_func_spec[4] = {
+	[ABP_FUNCTION_A] = { .output_min = 1638, .output_max = 14746,
+			    .capabilities = ABP_CAP_NULL },
+	[ABP_FUNCTION_D] = { .output_min = 1638, .output_max = 14746,
+			    .capabilities = ABP_CAP_TEMP | ABP_CAP_SLEEP },
+	[ABP_FUNCTION_S] = { .output_min = 1638, .output_max = 14746,
+			    .capabilities = ABP_CAP_SLEEP },
+	[ABP_FUNCTION_T] = { .output_min = 1638, .output_max = 14747,
+			    .capabilities = ABP_CAP_TEMP }
 };
 
 static const struct iio_chan_spec abp060mg_p_channel[] = {
@@ -108,7 +114,6 @@ static bool abp060mg_conversion_is_valid(struct abp_state *state)
 
 static int abp060mg_get_measurement(struct abp_state *state)
 {
-	//const struct hsc_chip_data *chip = data->chip;
 	int ret;
 
 	ret = state->recv_cb(state);
@@ -122,6 +127,26 @@ static int abp060mg_get_measurement(struct abp_state *state)
 	return 0;
 }
 
+/*
+ * IIO ABI expects
+ * value = (conv + offset) * scale
+ *
+ * datasheet provides the following formula for determining the temperature
+ * temp[C] = conv * a + b
+ *   where a = 200/2047; b = -50
+ *
+ *  temp[C] = (conv + (b/a)) * a * (1000)
+ *  =>
+ *  scale = a * 1000 = .097703957 * 1000 = 97.703957
+ *  offset = b/a = -50 / .097703957 = -50000000 / 97704
+ *
+ *  based on the datasheet
+ *  pressure = (conv - Omin) * Q + Pmin =
+ *          ((conv - Omin) + Pmin/Q) * Q
+ *  =>
+ *  scale = Q = (Pmax - Pmin) / (Omax - Omin)
+ *  offset = Pmin/Q - Omin = Pmin * (Omax - Omin) / (Pmax - Pmin) - Omin
+ */
 static int abp060mg_read_raw(struct iio_dev *indio_dev,
 			struct iio_chan_spec const *chan, int *val,
 			int *val2, long mask)
@@ -169,7 +194,7 @@ static int abp060mg_read_raw(struct iio_dev *indio_dev,
 			return IIO_VAL_INT_PLUS_MICRO;
 		case IIO_PRESSURE:
 			*val = state->p_scale;
-			*val2 = ABP060MG_NUM_COUNTS * 1000; /* to kPa */
+			*val2 = state->p_scale_dec;
 			return IIO_VAL_FRACTIONAL;
 		default:
 			return -EINVAL;
@@ -187,43 +212,19 @@ static const struct iio_info abp060mg_info = {
 	.read_raw = abp060mg_read_raw,
 };
 
-static bool abp060mg_sensor_has_temp(const u32 transfer_function)
+static void abp060mg_init_attributes(struct abp_state *state)
 {
-	switch (transfer_function) {
-	case ABP_FUNCTION_D:
-	case ABP_FUNCTION_T:
-		return true;
-	default:
-		return false;
-	};
-}
-
-static bool abp060mg_sensor_has_sleep_mode(const u32 transfer_function)
-{
-	switch (transfer_function) {
-	case ABP_FUNCTION_D:
-	case ABP_FUNCTION_S:
-		return true;
-	default:
-		return false;
-	};
-}
-
-static void abp060mg_init_device(struct iio_dev *indio_dev, unsigned long id)
-{
-	struct abp_state *state = iio_priv(indio_dev);
-	struct abp_config *cfg = &abp_config[id];
 	s64 tmp;
 
-	state->p_scale = cfg->max - cfg->min;
-	state->pmin = cfg->min;
-	state->pmax = cfg->max;
-	state->outmin = ABP060MG_MIN_COUNTS;
-	state->outmax = ABP060MG_MAX_COUNTS;
+	state->p_scale = state->pmax - state->pmin;
+	state->p_scale_dec = (state->func_spec->output_max - state->func_spec->output_min)
+			    * MILLI;
 
-	tmp = div_s64(((s64)state->pmin * (s64)(state->outmax - state->outmin)) * MICRO,
+	tmp = div_s64(((s64)state->pmin *
+		      (s64)(state->func_spec->output_max - state->func_spec->output_min))
+		      * MICRO,
 		      state->pmax - state->pmin);
-	tmp -= (s64)state->outmin * MICRO;
+	tmp -= (s64)state->func_spec->output_min * MICRO;
 	state->p_offset = div_s64_rem(tmp, MICRO, &state->p_offset_dec);
 }
 
@@ -232,6 +233,7 @@ int abp060mg_common_probe(struct device *dev, abp_recv_fn recv, const u32 cfg_id
 {
 	struct iio_dev *indio_dev;
 	struct abp_state *state;
+	u32 function;
 	int ret;
 
 	indio_dev = devm_iio_device_alloc(dev, sizeof(*state));
@@ -239,37 +241,43 @@ int abp060mg_common_probe(struct device *dev, abp_recv_fn recv, const u32 cfg_id
 		return -ENOMEM;
 
 	state = iio_priv(indio_dev);
-
 	state->recv_cb = recv;
 	state->dev = dev;
 
 	if (flags & ABP_FLAG_MREQ)
 		state->mreq_len = 1;
 
-	abp060mg_init_device(indio_dev, cfg_id);
-
 	ret = device_property_read_u32(dev, "honeywell,transfer-function",
-				       &state->function);
+				       &function);
 	if (ret)
 		return dev_err_probe(dev, ret,
-			    "honeywell,transfer-function could not be read\n");
-	if (state->function > ABP_FUNCTION_T)
+			     "honeywell,transfer-function could not be read\n");
+	if (function > ABP_FUNCTION_T)
 		return dev_err_probe(dev, -EINVAL,
 				     "honeywell,transfer-function %d invalid\n",
-				     state->function);
+				     function);
 
-	device_property_read_u32(dev, "honeywell,pmin-pascal", &state->pmin);
-	device_property_read_u32(dev, "honeywell,pmax-pascal", &state->pmax);
+	state->func_spec = &abp_func_spec[function];
+
+	ret = device_property_read_u32(dev, "honeywell,pmin-pascal", &state->pmin);
+	if (ret)
+		state->pmin = abp_config[cfg_id].min;
+
+	ret = device_property_read_u32(dev, "honeywell,pmax-pascal", &state->pmax);
+	if (ret)
+		state->pmax = abp_config[cfg_id].max;
 
 	if (state->pmin >= state->pmax)
 		return dev_err_probe(dev, -EINVAL,
 				     "pressure limits are invalid\n");
 
+	abp060mg_init_attributes(state);
+
 	indio_dev->name = dev_name(dev);
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->info = &abp060mg_info;
 
-	if (abp060mg_sensor_has_temp(state->function)) {
+	if (state->func_spec->capabilities & ABP_CAP_TEMP) {
 		indio_dev->channels = abp060mg_pt_channel;
 		indio_dev->num_channels = ARRAY_SIZE(abp060mg_pt_channel);
 		state->read_len = 4;

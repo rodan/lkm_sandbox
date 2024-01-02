@@ -2,6 +2,9 @@
 /*
  * Copyright (C) 2016 - Marcin Malagowski <mrc@bourne.st>
  * Copyright (C) 2024 - Petre Rodan <petre.rodan@subdimension.ro>
+ *
+ * Datasheet: https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/siot/en-us/products/sensors/pressure-sensors/board-mount-pressure-sensors/common/documents/sps-siot-i2c-comms-digital-output-pressure-sensors-tn-008201-3-en-ciid-45841.pdf
+ * Datasheet: https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/siot/en-us/products/sensors/pressure-sensors/common/documents/sps-siot-sleep-mode-technical-note-008286-1-en-ciid-155793.pdf
  */
 
 #include <linux/delay.h>
@@ -15,19 +18,35 @@
 static int abp060mg_i2c_recv(struct abp_state *state)
 {
 	struct i2c_client *client = to_i2c_client(state->dev);
+	struct i2c_msg msg;
 	__be16 buf[2];
 	int ret;
 
-	buf[0] = 0;
-	ret = i2c_master_send(client, (u8 *)&buf, state->mreq_len);
-	if (ret < 0)
-		return ret;
+	if (state->func_spec->capabilities & ABP_CAP_SLEEP) {
+		/* send the Full Measurement Request (FMR) command to wake up
+		 * the sensor as per
+		 * "Sleep Mode for Use with Honeywell Digital Pressure Sensors"
+		 * technical note */
+		buf[0] = 0;
+		ret = i2c_master_send(client, (u8 *)&buf, state->mreq_len);
+		if (ret < 0)
+			return ret;
 
-	msleep_interruptible(ABP_RESP_TIME_MS);
+		msleep_interruptible(ABP_RESP_TIME_MS);
 
-	ret = i2c_master_recv(client, state->buffer, state->read_len);
-	if (ret < 0)
-		return ret;
+		ret = i2c_master_recv(client, state->buffer, state->read_len);
+		if (ret < 0)
+			return ret;
+	} else {
+		msg.addr = client->addr;
+		msg.flags = client->flags | I2C_M_RD;
+		msg.len = state->read_len;
+		msg.buf = state->buffer;
+
+		ret = i2c_transfer(client->adapter, &msg, 1);
+		if (ret < 0)
+			return ret;
+	}
 
 	return 0;
 }
