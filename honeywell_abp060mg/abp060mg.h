@@ -8,21 +8,22 @@
 #ifndef _ABP060MG_H
 #define _ABP060MG_H
 
+#include <linux/errno.h>
 #include <linux/stddef.h>
 #include <linux/types.h>
 
 #include <linux/iio/iio.h>
 
-#define ABP_REG_MEASUREMENT_RD_SIZE 4
-#define ABP_RESP_TIME_MS 40
+#define ABP_MAX_READ_SIZE 4
+#define ABP_RESP_TIME_MS  2
 
 /* flags accepted as argument to abp060mg_common_probe() */
-#define ABP_FLAG_NULL    0
-#define ABP_FLAG_MREQ    0x1
+#define ABP_FLAG_NULL     0
+#define ABP_FLAG_MREQ     0x1
 
-#define ABP_CAP_NULL     0x00
-#define ABP_CAP_TEMP     0x01 /* sensor can provide temperature conversions */
-#define ABP_CAP_SLEEP    0x02 /* sensor needs to be woken up */
+#define ABP_CAP_NULL      0x00
+#define ABP_CAP_TEMP      0x01 /* sensor can provide temperature conversions */
+#define ABP_CAP_SLEEP     0x02 /* sensor needs to be woken up */
 
 struct device;
 
@@ -62,6 +63,7 @@ enum abp_variant {
  * @p_scale_dec: pressure scale, decimal places
  * @p_offset: pressure offset
  * @p_offset_dec: pressure offset, decimal places
+ * @timestamp: timestamp when the last valid conversion was read out
  * @buffer: raw conversion data
  */
 struct abp_state {
@@ -78,7 +80,7 @@ struct abp_state {
 	s64 p_offset;
 	s32 p_offset_dec;
 	int64_t timestamp;
-	u8 buffer[ABP_REG_MEASUREMENT_RD_SIZE] __aligned(IIO_DMA_MINALIGN);
+	u8 buffer[ABP_MAX_READ_SIZE] __aligned(IIO_DMA_MINALIGN);
 };
 
 struct abp_func_spec {

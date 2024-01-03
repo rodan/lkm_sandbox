@@ -18,8 +18,7 @@
 #include <linux/units.h>
 
 #include "abp060mg.h"
-//#define ABP_ERROR_MASK        GENMASK(7, 6)
-#define ABP_ERROR_MASK        GENMASK(7, 7)
+#define ABP_ERROR_MASK        GENMASK(7, 6)
 #define ABP_TEMPERATURE_MASK  GENMASK(15, 5)
 #define ABP_PRESSURE_MASK     GENMASK(29, 16)
 #define ABP_BLANKING_NS       (100*MEGA) /* read sensor only once every 100ms */
@@ -278,7 +277,7 @@ int abp060mg_common_probe(struct device *dev, abp_recv_fn recv, const u32 type,
 
 	abp060mg_init_attributes(state);
 
-	indio_dev->name = name ? name: "unknown";
+	indio_dev->name = name;
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->info = &abp060mg_info;
 

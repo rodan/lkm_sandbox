@@ -22,48 +22,53 @@ static int abp060mg_spi_recv(struct abp_state *state)
 	struct spi_device *spi = to_spi_device(state->dev);
 	struct spi_transfer xfer = {
 		.tx_buf = NULL,
-		.rx_buf = state->buffer,
-		.len = state->read_len,
-	};
-	struct spi_transfer dummy_xfer = {
-		.tx_buf = NULL,
 		.rx_buf = NULL,
 		.len = 0,
 	};
-	u16 orig_cs_setup_value = spi->cs_setup.value;
-	u8 orig_cs_setup_unit = spi->cs_setup.unit;
+	u16 orig_cs_setup_value;
+	u8 orig_cs_setup_unit;
 
 	if (state->func_spec->capabilities & ABP_CAP_SLEEP) {
-		/* send the Full Measurement Request (FMR) command on the CS
+		/*
+		 * Send the Full Measurement Request (FMR) command on the CS
 		 * line in order to wake up the sensor as per
 		 * "Sleep Mode for Use with Honeywell Digital Pressure Sensors"
-		 * technical note
-		 * CS must be held asserted for at least 8 us without any clock
-		 * pulses being generated
+		 * technical note (consult the datasheet link in the header).
+		 *
+		 * These specifications require the CS line to be held asserted
+		 * for at least 8µs without any payload being generated.
 		 */
+		orig_cs_setup_value = spi->cs_setup.value;
+		orig_cs_setup_unit = spi->cs_setup.unit;
 		spi->cs_setup.value = 8;
 		spi->cs_setup.unit = SPI_DELAY_UNIT_USECS;
-		spi_sync_transfer(spi, &dummy_xfer, 1);
+		/*
+		 * Send a dummy 0-size packet so that CS gets toggled.
+		 * Trying to manually call spi->controller->set_cs() instead
+		 * does not work as expected the second time.
+		 */
+		spi_sync_transfer(spi, &xfer, 1);
 		spi->cs_setup.value = orig_cs_setup_value;
 		spi->cs_setup.unit = orig_cs_setup_unit;
+
 		msleep_interruptible(ABP_RESP_TIME_MS);
 	}
 
+	xfer.rx_buf = state->buffer;
+	xfer.len = state->read_len;
 	return spi_sync_transfer(spi, &xfer, 1);
 }
 
 static int abp060mg_spi_probe(struct spi_device *spi)
 {
 	const struct spi_device_id *id = spi_get_device_id(spi);
-	const char *name = NULL;
-	u32 type = 0;
 
-	if (id) {
-		type = id->driver_data;
-		name = id->name;
+	if (!id) {
+		return -EOPNOTSUPP;
 	}
 
-	return abp060mg_common_probe(&spi->dev, abp060mg_spi_recv, type, name, 0);
+	return abp060mg_common_probe(&spi->dev, abp060mg_spi_recv,
+				     id->driver_data, id->name, ABP_FLAG_NULL);
 }
 
 static const struct spi_device_id abp060mg_spi_id_table[] = {

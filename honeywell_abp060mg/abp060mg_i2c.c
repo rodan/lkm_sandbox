@@ -8,7 +8,6 @@
  */
 
 #include <linux/delay.h>
-#include <linux/errno.h>
 #include <linux/i2c.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
@@ -23,30 +22,34 @@ static int abp060mg_i2c_recv(struct abp_state *state)
 	int ret;
 
 	if (state->func_spec->capabilities & ABP_CAP_SLEEP) {
-		/* send the Full Measurement Request (FMR) command to wake up
-		 * the sensor as per
+		/*
+		 * Send the Full Measurement Request (FMR) command on the CS
+		 * line in order to wake up the sensor as per
 		 * "Sleep Mode for Use with Honeywell Digital Pressure Sensors"
-		 * technical note */
+		 * technical note (consult the datasheet link in the header).
+		 *
+		 * These specifications require a dummy packet comprised only by
+		 * a single byte that contains the 7bit slave address and the
+		 * READ bit followed by a STOP.
+		 * Because the i2c API does not allow packets without a payload,
+		 * the driver sends two bytes in this implementation and hopes
+		 * the sensor will not misbehave.
+		 */
 		buf[0] = 0;
-		ret = i2c_master_send(client, (u8 *)&buf, state->mreq_len);
+		ret = i2c_master_recv(client, (u8 *)&buf, state->mreq_len);
 		if (ret < 0)
 			return ret;
 
 		msleep_interruptible(ABP_RESP_TIME_MS);
-
-		ret = i2c_master_recv(client, state->buffer, state->read_len);
-		if (ret < 0)
-			return ret;
-	} else {
-		msg.addr = client->addr;
-		msg.flags = client->flags | I2C_M_RD;
-		msg.len = state->read_len;
-		msg.buf = state->buffer;
-
-		ret = i2c_transfer(client->adapter, &msg, 1);
-		if (ret < 0)
-			return ret;
 	}
+
+	msg.addr = client->addr;
+	msg.flags = client->flags | I2C_M_RD;
+	msg.len = state->read_len;
+	msg.buf = state->buffer;
+	ret = i2c_transfer(client->adapter, &msg, 1);
+	if (ret < 0)
+		return ret;
 
 	return 0;
 }
@@ -55,8 +58,10 @@ static int abp060mg_i2c_probe(struct i2c_client *client)
 {
 	const struct i2c_device_id *id = i2c_client_get_device_id(client);
 	u32 flags = ABP_FLAG_NULL;
-	const char *name = NULL;
-	u32 type = 0;
+
+	if (!id) {
+		return -EOPNOTSUPP;
+	}
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
 		return -EOPNOTSUPP;
@@ -64,13 +69,8 @@ static int abp060mg_i2c_probe(struct i2c_client *client)
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_QUICK))
 		flags |= ABP_FLAG_MREQ;
 
-	if (id) {
-		type = id->driver_data;
-		name = id->name;
-	}
-
 	return abp060mg_common_probe(&client->dev, abp060mg_i2c_recv,
-				     type, name, flags);
+				     id->driver_data, id->name, flags);
 }
 
 static const struct i2c_device_id abp060mg_i2c_id_table[] = {
