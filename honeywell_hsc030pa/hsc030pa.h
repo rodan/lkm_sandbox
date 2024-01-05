@@ -10,6 +10,8 @@
 
 #include <linux/types.h>
 
+#include <linux/iio/iio.h>
+
 #define HSC_REG_MEASUREMENT_RD_SIZE 4
 
 struct device;
@@ -53,7 +55,7 @@ struct hsc_data {
 	s32 p_scale_dec;
 	s64 p_offset;
 	s32 p_offset_dec;
-	u8 buffer[HSC_REG_MEASUREMENT_RD_SIZE] __aligned(IIO_DMA_MINALIGN);
+	u8 buffer[16] __aligned(IIO_DMA_MINALIGN);
 };
 
 struct hsc_chip_data {

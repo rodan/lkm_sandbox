@@ -12,8 +12,6 @@
 #include <linux/spi/spi.h>
 #include <linux/stddef.h>
 
-#include <linux/iio/iio.h>
-
 #include "hsc030pa.h"
 
 static int hsc_spi_recv(struct hsc_data *data)

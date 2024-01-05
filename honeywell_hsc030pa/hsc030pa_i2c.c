@@ -13,8 +13,6 @@
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
 
-#include <linux/iio/iio.h>
-
 #include "hsc030pa.h"
 
 static int hsc_i2c_recv(struct hsc_data *data)
