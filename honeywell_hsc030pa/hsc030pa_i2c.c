@@ -6,8 +6,10 @@
  *
  * Datasheet: https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/siot/en-us/products/sensors/pressure-sensors/board-mount-pressure-sensors/trustability-hsc-series/documents/sps-siot-trustability-hsc-series-high-accuracy-board-mount-pressure-sensors-50099148-a-en-ciid-151133.pdf [hsc]
  * Datasheet: https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/siot/en-us/products/sensors/pressure-sensors/board-mount-pressure-sensors/common/documents/sps-siot-i2c-comms-digital-output-pressure-sensors-tn-008201-3-en-ciid-45841.pdf [i2c related]
+ * Datasheet: https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/siot/en-us/products/sensors/pressure-sensors/common/documents/sps-siot-sleep-mode-technical-note-008286-1-en-ciid-155793.pdf [sleep mode]
  */
 
+#include <linux/delay.h>
 #include <linux/errno.h>
 #include <linux/i2c.h>
 #include <linux/mod_devicetable.h>
@@ -19,7 +21,29 @@ static int hsc_i2c_recv(struct hsc_data *data)
 {
 	struct i2c_client *client = to_i2c_client(data->dev);
 	struct i2c_msg msg;
+	u8 buf;
 	int ret;
+
+	if (data->capabilities & HSC_CAP_SLEEP) {
+		/*
+		 * Send the Full Measurement Request (FMR) command on the CS
+		 * line in order to wake up the sensor as per
+		 * "Sleep Mode for Use with Honeywell Digital Pressure Sensors"
+		 * technical note (consult the datasheet link in the header).
+		 *
+		 * These specifications require a dummy packet comprised only by
+		 * a single byte that contains the 7bit slave address and the
+		 * READ bit followed by a STOP.
+		 * Because the i2c API does not allow packets without a payload,
+		 * the driver sends two bytes in this implementation and hopes
+		 * the sensor will not misbehave.
+		 */
+		ret = i2c_master_recv(client, &buf, 1);
+		if (ret < 0)
+			return ret;
+	}
+
+	msleep_interruptible(HSC_RESP_TIME_MS);
 
 	msg.addr = client->addr;
 	msg.flags = client->flags | I2C_M_RD;

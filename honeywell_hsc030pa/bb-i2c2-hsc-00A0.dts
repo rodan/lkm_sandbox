@@ -24,6 +24,7 @@
 		honeywell,transfer-function = <0>;
 		honeywell,pressure-triplet = "030PA";
 
+		//honeywell,sleep-mode;
 		// in case of a custom chip, use NA as pressure-triplet
 		// and populate pmin-pascal and pmax-pascal
 		// with the range limits converted into pascals
