@@ -39,9 +39,9 @@ static int abp060mg_i2c_recv(struct abp_state *state)
 		ret = i2c_master_recv(client, (u8 *)&buf, state->mreq_len);
 		if (ret < 0)
 			return ret;
-
-		msleep_interruptible(ABP_RESP_TIME_MS);
 	}
+
+	msleep_interruptible(ABP_RESP_TIME_MS);
 
 	msg.addr = client->addr;
 	msg.flags = client->flags | I2C_M_RD;

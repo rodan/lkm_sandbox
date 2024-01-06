@@ -45,14 +45,14 @@ static int abp060mg_spi_recv(struct abp_state *state)
 		/*
 		 * Send a dummy 0-size packet so that CS gets toggled.
 		 * Trying to manually call spi->controller->set_cs() instead
-		 * does not work as expected the second time.
+		 * does not work as expected during the second call.
 		 */
 		spi_sync_transfer(spi, &xfer, 1);
 		spi->cs_setup.value = orig_cs_setup_value;
 		spi->cs_setup.unit = orig_cs_setup_unit;
-
-		msleep_interruptible(ABP_RESP_TIME_MS);
 	}
+
+	msleep_interruptible(ABP_RESP_TIME_MS);
 
 	xfer.rx_buf = state->buffer;
 	xfer.len = state->read_len;
