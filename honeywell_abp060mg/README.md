@@ -33,7 +33,7 @@ ChangeLog:
 };
 ```
 
-where ```ADDR``` is the assigned i2c address: either ```0x08```, ```0x18```, ``0x28```, ```0x38```, ```0x48```, ```0x58```, ```0x68``` or ```0x78```.
+where ```ADDR``` is the assigned i2c address: either ```0x08```, ```0x18```, ```0x28```, ```0x38```, ```0x48```, ```0x58```, ```0x68``` or ```0x78```.
 
 The transfer function limits define the raw output of the sensor at a given pressure input and the chip's capabilities
 
