@@ -10,7 +10,7 @@ ChangeLog:
  * add spi driver (tested on ABPDANV030PGSA3)
  * add transfer-function property to get the chip capabilities
  * send wakeup sequence only if required by capabilities
- * add buffered trigger
+ * add triggered buffer
 
 ### device tree overlay contents
 

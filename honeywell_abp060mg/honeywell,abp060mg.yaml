@@ -101,13 +101,12 @@ properties:
   honeywell,transfer-function:
     description: |
       Transfer function which defines the range of valid values delivered by
-      the sensor. The default value is provided only for backward compatibility.
+      the sensor.
       0 - A, 10% to 90% of 2^14, no features
       1 - D, 10% to 90% of 2^14, temperature output and sleep mode
       2 - S, 10% to 90% of 2^14, sleep mode
       3 - T, 10% to 90% of 2^14, temperature output
     enum: [0, 1, 2, 3]
-    default: 2
     $ref: /schemas/types.yaml#/definitions/uint32
 
   honeywell,pmin-pascal:
@@ -157,7 +156,7 @@ examples:
             reg = <0>;
             spi-max-frequency = <800000>;
             honeywell,transfer-function = <0>;
-            //honeywell,pmin-pascal = <0>;
+            //honeywell,pmin-pascal = <(-400000)>;
             //honeywell,pmax-pascal = <200000>;
         };
     };
