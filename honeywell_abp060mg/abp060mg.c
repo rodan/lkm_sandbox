@@ -6,7 +6,6 @@
 
 #include <linux/array_size.h>
 #include <linux/bitfield.h>
-#include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/i2c.h>
@@ -17,11 +16,15 @@
 #include <linux/property.h>
 #include <linux/units.h>
 
+#include <linux/iio/buffer.h>
+#include <linux/iio/trigger_consumer.h>
+#include <linux/iio/triggered_buffer.h>
+
 #include "abp060mg.h"
+
 #define ABP_ERROR_MASK        GENMASK(7, 6)
 #define ABP_TEMPERATURE_MASK  GENMASK(15, 5)
 #define ABP_PRESSURE_MASK     GENMASK(29, 16)
-#define ABP_BLANKING_NS       (100*MEGA) /* read sensor only once every 100ms */
 
 struct abp_config {
 	int min;
@@ -88,24 +91,53 @@ static const struct abp_func_spec abp_func_spec[4] = {
 static const struct iio_chan_spec abp060mg_p_channel[] = {
 	{
 		.type = IIO_PRESSURE,
+		.address = 2,
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
 			BIT(IIO_CHAN_INFO_OFFSET) | BIT(IIO_CHAN_INFO_SCALE),
+		.scan_index = 0,
+		.scan_type = {
+			.sign = 'u',
+			.realbits = 14,
+			.storagebits = 16,
+			.shift = 0,
+			.endianness = IIO_BE,
+		},
 	},
+	IIO_CHAN_SOFT_TIMESTAMP(1),
 };
 
 static const struct iio_chan_spec abp060mg_pt_channel[] = {
 	{
 		.type = IIO_PRESSURE,
+		.address = 2,
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
 				      BIT(IIO_CHAN_INFO_SCALE) |
 				      BIT(IIO_CHAN_INFO_OFFSET),
+		.scan_index = 0,
+		.scan_type = {
+			.sign = 'u',
+			.realbits = 14,
+			.storagebits = 16,
+			.shift = 0,
+			.endianness = IIO_BE,
+		},
 	},
 	{
 		.type = IIO_TEMP,
+		.address = 0,
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
 				      BIT(IIO_CHAN_INFO_SCALE) |
 				      BIT(IIO_CHAN_INFO_OFFSET),
+		.scan_index = 1,
+		.scan_type = {
+			.sign = 'u',
+			.realbits = 11,
+			.storagebits = 16,
+			.shift = 5,
+			.endianness = IIO_BE,
+		},
 	},
+	IIO_CHAN_SOFT_TIMESTAMP(2),
 };
 
 static bool abp060mg_conversion_is_valid(struct abp_state *state)
@@ -126,6 +158,23 @@ static int abp060mg_get_measurement(struct abp_state *state)
 		return -EAGAIN;
 
 	return 0;
+}
+
+static irqreturn_t abp_trigger_handler(int irq, void *private)
+{
+	struct iio_poll_func *pf = private;
+	struct iio_dev *indio_dev = pf->indio_dev;
+	struct abp_state *state = iio_priv(indio_dev);
+	int ret;
+
+	ret = abp060mg_get_measurement(state);
+	if (!ret) {
+		iio_push_to_buffers_with_timestamp(indio_dev, &state->buffer,
+						   iio_get_time_ns(indio_dev));
+	}
+	iio_trigger_notify_done(indio_dev->trig);
+
+	return IRQ_HANDLED;
 }
 
 /*
@@ -155,16 +204,12 @@ static int abp060mg_read_raw(struct iio_dev *indio_dev,
 	struct abp_state *state = iio_priv(indio_dev);
 	int ret;
 	u32 recvd;
-	int64_t now = iio_get_time_ns(indio_dev);
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		if (!state->is_valid || ((now - state->timestamp) > ABP_BLANKING_NS)) {
-			ret = abp060mg_get_measurement(state);
-			if (ret)
-				return ret;
-			state->timestamp = now;
-		}
+		ret = abp060mg_get_measurement(state);
+		if (ret)
+			return ret;
 		recvd = get_unaligned_be32(state->buffer);
 		switch (chan->type) {
 		case IIO_PRESSURE:
@@ -290,6 +335,11 @@ int abp060mg_common_probe(struct device *dev, abp_recv_fn recv, const u32 type,
 		indio_dev->num_channels = ARRAY_SIZE(abp060mg_p_channel);
 		state->read_len = 2;
 	}
+
+	ret = devm_iio_triggered_buffer_setup(dev, indio_dev, NULL,
+					      abp_trigger_handler, NULL);
+	if (ret)
+		return ret;
 
 	return devm_iio_device_register(dev, indio_dev);
 }

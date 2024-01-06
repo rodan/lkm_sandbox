@@ -63,7 +63,6 @@ enum abp_variant {
  * @p_scale_dec: pressure scale, decimal places
  * @p_offset: pressure offset
  * @p_offset_dec: pressure offset, decimal places
- * @timestamp: timestamp when the last valid conversion was read out
  * @buffer: raw conversion data
  */
 struct abp_state {
@@ -79,8 +78,7 @@ struct abp_state {
 	s64 p_scale_dec;
 	s64 p_offset;
 	s32 p_offset_dec;
-	int64_t timestamp;
-	u8 buffer[ABP_MAX_READ_SIZE] __aligned(IIO_DMA_MINALIGN);
+	u8 buffer[16] __aligned(IIO_DMA_MINALIGN);
 };
 
 struct abp_func_spec {
