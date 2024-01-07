@@ -8,6 +8,7 @@ ChangeLog:
 
  * refactor code so that driver can use either i2c or spi as communication bus
  * add spi driver (tested on ABPDANV030PGSA3)
+ * add custom measurement range properties via pmin-pascal, pmax-pascal
  * add transfer-function property to get the chip capabilities
  * send wakeup sequence only if required by capabilities
  * add triggered buffer
