@@ -398,7 +398,6 @@ static int hsc_read_raw(struct iio_dev *indio_dev,
 static const struct iio_chan_spec hsc_channels[] = {
 	{
 		.type = IIO_PRESSURE,
-		.address = 2,
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
 				      BIT(IIO_CHAN_INFO_SCALE) |
 				      BIT(IIO_CHAN_INFO_OFFSET),
@@ -413,7 +412,6 @@ static const struct iio_chan_spec hsc_channels[] = {
 	},
 	{
 		.type = IIO_TEMP,
-		.address = 0,
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
 				      BIT(IIO_CHAN_INFO_SCALE) |
 				      BIT(IIO_CHAN_INFO_OFFSET),

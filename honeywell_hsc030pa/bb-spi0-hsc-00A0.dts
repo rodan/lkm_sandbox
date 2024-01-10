@@ -58,6 +58,7 @@
 		honeywell,transfer-function = <0>;
 		honeywell,pressure-triplet = "100PA";
 
+		//honeywell,sleep-mode;
 		// in case of a custom range, use NA as pressure-triplet
 		// and populate pmin-pascal and pmax-pascal
 		// with the range limits converted into pascals
