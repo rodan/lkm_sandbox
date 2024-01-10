@@ -15,9 +15,6 @@ description: |
   The vendor calls them "ABP series". All of them have an identical programming
   model but differ in pressure range, unit and transfer function.
 
-  To support different models one needs to specify the pressure range as well
-  as the transfer function.
-
   The transfer function defines both the ranges of raw conversion values
   delivered by the sensor and the capabilities (temperature output and sleep
   mode are optional features).
@@ -107,6 +104,7 @@ properties:
       2 - S, 10% to 90% of 2^14, sleep mode
       3 - T, 10% to 90% of 2^14, temperature output
     enum: [0, 1, 2, 3]
+    default: 2
     $ref: /schemas/types.yaml#/definitions/uint32
 
   honeywell,pmin-pascal:
@@ -127,7 +125,6 @@ properties:
 required:
   - compatible
   - reg
-  - honeywell,transfer-function
 
 allOf:
   - $ref: /schemas/spi/spi-peripheral-props.yaml

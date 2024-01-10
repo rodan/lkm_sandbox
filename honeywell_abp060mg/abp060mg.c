@@ -8,6 +8,7 @@
 #include <linux/bitfield.h>
 #include <linux/device.h>
 #include <linux/err.h>
+#include <linux/errno.h>
 #include <linux/i2c.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
@@ -17,6 +18,7 @@
 #include <linux/units.h>
 
 #include <linux/iio/buffer.h>
+#include <linux/iio/iio.h>
 #include <linux/iio/trigger_consumer.h>
 #include <linux/iio/triggered_buffer.h>
 
@@ -91,7 +93,6 @@ static const struct abp_func_spec abp_func_spec[4] = {
 static const struct iio_chan_spec abp060mg_p_channel[] = {
 	{
 		.type = IIO_PRESSURE,
-		.address = 2,
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
 			BIT(IIO_CHAN_INFO_OFFSET) | BIT(IIO_CHAN_INFO_SCALE),
 		.scan_index = 0,
@@ -109,7 +110,6 @@ static const struct iio_chan_spec abp060mg_p_channel[] = {
 static const struct iio_chan_spec abp060mg_pt_channel[] = {
 	{
 		.type = IIO_PRESSURE,
-		.address = 2,
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
 				      BIT(IIO_CHAN_INFO_SCALE) |
 				      BIT(IIO_CHAN_INFO_OFFSET),
@@ -124,7 +124,6 @@ static const struct iio_chan_spec abp060mg_pt_channel[] = {
 	},
 	{
 		.type = IIO_TEMP,
-		.address = 0,
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
 				      BIT(IIO_CHAN_INFO_SCALE) |
 				      BIT(IIO_CHAN_INFO_OFFSET),

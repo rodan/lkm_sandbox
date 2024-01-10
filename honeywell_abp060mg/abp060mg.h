@@ -8,7 +8,6 @@
 #ifndef _ABP060MG_H
 #define _ABP060MG_H
 
-#include <linux/errno.h>
 #include <linux/stddef.h>
 #include <linux/types.h>
 

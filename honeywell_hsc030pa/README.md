@@ -71,26 +71,30 @@ iio_info version: 0.25 (git tag:v0.25)
 Libiio version: 0.25 (git tag: v0.25) backends: local xml ip usb
 IIO context created with local backend.
 Backend version: 0.25 (git tag: v0.25)
-Backend description string: Linux beagle 6.7.0-rc2+ #2 PREEMPT Fri Nov 24 09:41:10 -00 2023 armv7l
+Backend description string: Linux beagle 6.7.0-rc6+ #3 PREEMPT Tue Jan  2 17:12:38 -00 2024 armv7l
 IIO context has 2 attributes:
-        local,kernel: 6.7.0-rc2+
+        local,kernel: 6.7.0-rc6+
         uri: local:
 IIO context has 2 devices:
-        iio:device0: hsc030pa
-                2 channels found:
-                        temp:  (input)
+        iio:device0: 030PA (buffer capable)
+                3 channels found:
+                        pressure:  (input, index: 0, format: be:u14/16>>0)
+                        3 channel-specific attributes found:
+                                attr  0: offset value: -1638.000000
+                                attr  1: raw value: 7918
+                                attr  2: scale value: 0.015779905
+                        temp:  (input, index: 1, format: be:u11/16>>5)
                         3 channel-specific attributes found:
                                 attr  0: offset value: -511.749774830
-                                attr  1: raw value: 755
+                                attr  1: raw value: 754
                                 attr  2: scale value: 97.703957
-                        pressure:  (input)
-                        3 channel-specific attributes found:
-                                attr  0: offset value: -1638.000000000
-                                attr  1: raw value: 7727
-                                attr  2: scale value: 0.015780439
-                1 device-specific attributes found:
-                                attr  0: waiting_for_supplier value: 0
-                No trigger on this device
+                        timestamp:  (input, index: 2, format: le:S64/64>>0)
+                2 device-specific attributes found:
+                                attr  0: current_timestamp_clock value: realtime
+                                attr  1: waiting_for_supplier value: 0
+                2 buffer-specific attributes found:
+                                attr  0: data_available value: 0
+                                attr  1: direction value: in
 ```
 
 ```(double) (raw + offset) * scale``` provides the pressure in KPa and temperature in milli degrees C, as per the IIO ABI requirements.

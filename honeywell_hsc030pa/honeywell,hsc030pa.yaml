@@ -149,6 +149,7 @@ examples:
             honeywell,pressure-triplet = "NA";
             honeywell,pmin-pascal = <0>;
             honeywell,pmax-pascal = <200000>;
+            //honeywell,sleep-mode;
         };
     };
 ...
