@@ -23,6 +23,7 @@
 #include <linux/units.h>
 
 #include <linux/iio/buffer.h>
+#include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
 #include <linux/iio/trigger_consumer.h>
 #include <linux/iio/triggered_buffer.h>
@@ -307,10 +308,16 @@ static irqreturn_t hsc_trigger_handler(int irq, void *private)
 	int ret;
 
 	ret = hsc_get_measurement(data);
-	if (!ret) {
-		iio_push_to_buffers_with_timestamp(indio_dev, &data->buffer,
-						   iio_get_time_ns(indio_dev));
-	}
+	if (ret)
+		goto error;
+
+	memcpy(&data->scan.chan[0], &data->buffer, 2);
+	memcpy(&data->scan.chan[1], &data->buffer[2], 2);
+
+	iio_push_to_buffers_with_timestamp(indio_dev, &data->scan,
+					   iio_get_time_ns(indio_dev));
+
+error:
 	iio_trigger_notify_done(indio_dev->trig);
 
 	return IRQ_HANDLED;
@@ -406,7 +413,6 @@ static const struct iio_chan_spec hsc_channels[] = {
 			.sign = 'u',
 			.realbits = 14,
 			.storagebits = 16,
-			.shift = 0,
 			.endianness = IIO_BE,
 		},
 	},
@@ -500,8 +506,7 @@ int hsc_common_probe(struct device *dev, hsc_recv_fn recv)
 		return dev_err_probe(dev, -EINVAL,
 				     "pressure limits are invalid\n");
 
-	ret = device_property_read_bool(dev, "honeywell,sleep-mode");
-	if (ret)
+	if (device_property_read_bool(dev, "honeywell,sleep-mode"))
 		hsc->capabilities |= HSC_CAP_SLEEP;
 
 	ret = devm_regulator_get_enable(dev, "vdd");

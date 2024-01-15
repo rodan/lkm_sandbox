@@ -60,7 +60,11 @@ struct hsc_data {
 	s32 p_scale_dec;
 	s64 p_offset;
 	s32 p_offset_dec;
-	u8 buffer[16] __aligned(IIO_DMA_MINALIGN);
+	struct {
+		__be16 chan[2];
+		s64 timestamp __aligned(8);
+	} scan;
+	u8 buffer[HSC_REG_MEASUREMENT_RD_SIZE] __aligned(IIO_DMA_MINALIGN);
 };
 
 struct hsc_chip_data {
