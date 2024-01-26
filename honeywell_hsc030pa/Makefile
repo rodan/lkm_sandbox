@@ -2,7 +2,7 @@
 obj-m += hsc030pa.o hsc030pa_i2c.o hsc030pa_spi.o
 KBUILD_CFLAGS += -Wall
 PWD := $(CURDIR)
-LINUX_SRC = /usr/src/linux
+LINUX_SRC = /usr/src/linux-6.8
 
 SRC := $(patsubst %.o,%.c,${obj-m})
 
@@ -15,3 +15,5 @@ clean:
 dtbs:
 	@bash scripts/make_dtbs.sh
 
+scan-build: clean
+	@scan-build --use-cc /usr/bin/gcc make
