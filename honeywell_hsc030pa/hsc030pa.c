@@ -506,9 +506,6 @@ int hsc_common_probe(struct device *dev, hsc_recv_fn recv)
 		return dev_err_probe(dev, -EINVAL,
 				     "pressure limits are invalid\n");
 
-	if (device_property_read_bool(dev, "honeywell,sleep-mode"))
-		hsc->capabilities |= HSC_CAP_SLEEP;
-
 	ret = devm_regulator_get_enable(dev, "vdd");
 	if (ret)
 		return dev_err_probe(dev, ret, "can't get vdd supply\n");

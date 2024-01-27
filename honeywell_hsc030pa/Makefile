@@ -15,3 +15,5 @@ clean:
 dtbs:
 	@bash scripts/make_dtbs.sh
 
+scan-build: clean
+	@scan-build make
