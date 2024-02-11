@@ -311,7 +311,7 @@ static irqreturn_t hsc_trigger_handler(int irq, void *private)
 	if (ret)
 		goto error;
 
-	memcpy(&data->scan.chan[0], &data->buffer, 2);
+	memcpy(&data->scan.chan[0], &data->buffer[0], 2);
 	memcpy(&data->scan.chan[1], &data->buffer[2], 2);
 
 	iio_push_to_buffers_with_timestamp(indio_dev, &data->scan,
